@@ -71,6 +71,11 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
                 child: ColoredBox(color: Color(0x29081916)))),
               Positioned(top: 8, left: 470, width: 260,
                 child: _header()),
+              Positioned(top: 8, left: 850, child: IconButton(
+                tooltip: 'Kilépés a játékból',
+                onPressed: _leaveConfirm,
+                icon: const Icon(Icons.exit_to_app,
+                  color: Color(0xFFFFD9A4), size: 29))),
               Positioned(top: 18, left: 18, width: 267,
                 height: 114,
                 child: other.isEmpty ? const SizedBox.shrink()
@@ -421,8 +426,13 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
         fontSize: 11, color: Color(0xFFFFC77E), fontWeight: FontWeight.bold)),
       const SizedBox(height: 6),
       Row(children: [
-        const CircleAvatar(radius: 29, backgroundColor: Color(0xFFC08A4F),
-          child: Icon(Icons.local_bar, size: 34, color: Color(0xFF153B34))),
+        SizedBox(width: 58, height: 58,
+          child: ClipOval(child: Image.asset(
+            'assets/original/hero_' + _heroSlug(me['hero'].toString()) + '.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stack) => const CircleAvatar(
+              backgroundColor: Color(0xFFC08A4F),
+              child: Icon(Icons.local_bar, size: 34, color: Color(0xFF153B34))))),
         const SizedBox(width: 9),
         Expanded(child: Text(me['hero'].toString(), maxLines: 2,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
@@ -666,6 +676,36 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
       actions: [TextButton(onPressed: () => Navigator.pop(context),
         child: const Text('Értem'))],
     ));
+
+  String _heroSlug(String name) => switch (name) {
+    'Mélyivó Fred' => 'melyivo_fred',
+    'Löttyintős' => 'lottyintos',
+    'Küv Évi' => 'kuv_evi',
+    'Pohárnok' => 'poharnok',
+    'Recycle Béla' => 'recycle_bela',
+    'Sarki Jézus' => 'sarki_jezus',
+    'Sommelier Pityu' => 'sommelier_pityu',
+    'Vízköpő Karesz' => 'vizkopo_karesz',
+    'Böske, a Rettentő' => 'boske',
+    'Hollósi elvtárs' => 'hollosi',
+    'Buzgómócsing' => 'buzgomocsing',
+    'Icuka' => 'icuka',
+    _ => 'default',
+  };
+
+  Future<void> _leaveConfirm() async {
+    final ok = await showDialog<bool>(context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kilépsz a játékból?'),
+        content: const Text('Az aktuális játszma nem kerül mentésre.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Maradok')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kilépés')),
+        ]));
+    if (ok == true && mounted) widget.onLeave();
+  }
 
   void _toast(String value) => ScaffoldMessenger.of(context)
     .showSnackBar(SnackBar(content: Text(value)));
