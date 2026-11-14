@@ -384,7 +384,7 @@ class Game {
     final card = p['card'] as String;
     final index = p['cup'] as int;
     if (card == 'tip') {
-      victim['money'] = max(0, (victim['money'] as int) - 20);
+      victim['money'] = math.max(0, (victim['money'] as int) - 20);
     } else if (card == 'break') {
       final cup = _cups(victim).removeAt(index);
       cupDiscard.add(cup['size'] as int);
