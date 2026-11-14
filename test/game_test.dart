@@ -39,9 +39,9 @@ void main() {
     expect(game.actions, 1);
   });
 
-  test('Turn passes after spending both actions', () {
+  test('Player can explicitly finish a turn even with actions remaining', () {
     final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
-    expect(game.apply('a', {'type': 'pass'}), isNull);
+    expect(game.apply('a', {'type': 'endTurn'}), isNull);
     expect(game.turn, 1);
     expect(game.actions, 2);
   });
@@ -168,9 +168,12 @@ void main() {
     expect(game.actions, 1);
     expect(game.apply('a', {'type': 'draw'}), isNull);
     expect(game.drawChoice, isNull);
-    expect(game.turn, 1);
+    expect(game.turn, 0);
+    expect(game.actions, 0);
     expect((game.players[0]['hand'] as List).length, initialCount + 4);
     expect(game.apply('a', {'type': 'draw'}), isNotNull);
+    expect(game.apply('a', {'type': 'endTurn'}), isNull);
+    expect(game.turn, 1);
   });
 
   test('Players may have no more than three glasses, and failed buy is free', () {
@@ -194,6 +197,10 @@ void main() {
     expect(game.apply('a', {'type': 'draw'}), isNull);
     expect(game.drawChoice, isNotNull);
     expect(game.apply('a', {'type': 'keepDraw', 'drop': 0}), isNull);
+    expect(game.turn, 0);
+    expect(game.actions, 0);
+    expect(game.apply('a', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNotNull);
+    expect(game.apply('a', {'type': 'endTurn'}), isNull);
     expect(game.turn, 1);
   });
 
@@ -209,13 +216,26 @@ void main() {
     expect(game.actions, 1);
     expect(game.drawActionsThisTurn, 1);
     expect(game.apply('human', {'type': 'draw'}), isNull);
-    expect(game.turnNumber, 2);
-    expect(game.currentId, 'bot-1');
-    expect(game.drawActionsThisTurn, 0);
+    expect(game.turnNumber, 1);
+    expect(game.currentId, 'human');
+    expect(game.actions, 0);
+    expect(game.drawActionsThisTurn, 2);
     final handSize = (game.players[0]['hand'] as List).length;
     expect(handSize, 9);
     expect(game.apply('human', {'type': 'draw'}), isNotNull);
+    expect(game.apply('human', {'type': 'buy', 'indexes': [0]}), isNotNull);
+    expect(game.apply('human', {'type': 'sell', 'indexes': [0]}), isNotNull);
+    expect(game.apply('human', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNotNull);
     expect((game.players[0]['hand'] as List).length, handSize);
+    expect(game.currentId, 'human');
+    expect(game.apply('human', {'type': 'endTurn'}), isNull);
+    expect(game.turnNumber, 2);
+    expect(game.currentId, 'bot-1');
+    expect(game.drawActionsThisTurn, 0);
+    game.players[1]['hand'] = <String>[];
+    game.players[2]['hand'] = <String>[];
+    game.deck.clear();
+    game.discard.clear();
     game.runBots();
     expect(game.currentId, 'human');
     expect(game.turnNumber, 4);
@@ -235,6 +255,49 @@ void main() {
     expect(game.apply('human', {'type': 'draw'}), isNull);
     expect(game.actions, 1);
     expect(game.drawActionsThisTurn, 1);
+  });
+
+  test('Last draw in a two-player game requires selection then end-turn click', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.apply('a', {'type': 'keepDraw', 'drop': 0}), isNull);
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.actions, 0);
+    expect(game.currentId, 'a');
+    expect(game.apply('a', {'type': 'endTurn'}), isNotNull);
+    expect(game.apply('a', {'type': 'keepDraw', 'drop': 0}), isNull);
+    expect(game.currentId, 'a');
+    expect(game.actions, 0);
+    expect(game.apply('a', {'type': 'draw'}), isNotNull);
+    expect(game.apply('a', {'type': 'endTurn'}), isNull);
+    expect(game.currentId, 'b');
+  });
+
+  test('Play resolution is allowed after spending last action, but new ones are not', () {
+    final game = Game([
+      Seat('a', 'Anna'), Seat('b', 'Béla'), Seat('c', 'Cecil'),
+    ]);
+    game.players[0]['hand'] = <String>['muscat', 'soda', 'soda'];
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.actions, 1);
+    expect(game.apply('a', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNull);
+    expect(game.actions, 0);
+    expect(game.playSlots, 1);
+    expect(game.apply('a', {'type': 'endTurn'}), isNotNull);
+    expect(game.apply('a', {'type': 'draw'}), isNotNull);
+    expect(game.apply('a', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNull);
+    expect(game.playSlots, 0);
+    expect(game.currentId, 'a');
+    expect(game.actions, 0);
+    expect(game.apply('a', {'type': 'endTurn'}), isNull);
+    expect(game.currentId, 'b');
+  });
+
+  test('End turn cannot be submitted by someone else', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    expect(game.apply('b', {'type': 'endTurn'}), isNotNull);
+    expect(game.turn, 0);
+    expect(game.actions, 2);
   });
 
 }
