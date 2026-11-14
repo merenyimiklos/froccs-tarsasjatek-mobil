@@ -259,8 +259,10 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
         const Text('AKCIÓK', style: TextStyle(
           fontSize: 20, color: Color(0xFFFFE6B5),
           fontWeight: FontWeight.w900, letterSpacing: 1)),
-        Text(myTurn ? 'A te köröd!  ·  ' +
-            widget.snapshot['actions'].toString() + ' akció'
+        Text(myTurn
+          ? (slots > 0
+            ? 'Kijátszás · még $slots lap'
+            : 'A te köröd · ${widget.snapshot['actions']} akció')
           : 'Másik játékos köre',
           style: const TextStyle(color: Color(0xFFACD7C9), fontSize: 12)),
         const SizedBox(height: 4),
@@ -268,7 +270,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           canAct && slots == 0 && widget.snapshot['actions'] == 2 &&
               ready.isNotEmpty,
           () => send({'type': 'sell', 'indexes': ready})),
-        _action('HÚZÁS', Icons.style, const Color(0xFF277A66),
+        _action('HÚZÁS · 2 LAP', Icons.style, const Color(0xFF277A66),
           canAct && slots == 0, () => send({'type': 'draw'})),
         _action('POHÁRVÁSÁRLÁS', Icons.local_drink,
           const Color(0xFF277A66), canAct && slots == 0,
@@ -397,10 +399,13 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
                         '/' + me['cups'][i]['size'].toString(),
                     style: const TextStyle(color: Color(0xFFFFDC9F),
                       fontWeight: FontWeight.bold)),
-                  SizedBox(width: 100, child: Text(
-                    (me['cups'][i]['cards'] as List).map((c) =>
-                      _symbol(c.toString())).join(' '),
-                    textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
+                  SizedBox(width: 104, child: Text(
+                    _cupCaption((me['cups'][i]['cards'] as List)
+                      .cast<String>()),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11,
+                      color: Color(0xFFFFE8C3)))),
                 ])),
         ])),
       if (selectedCard != null && canAct)
@@ -718,6 +723,16 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
     final cards = (cup['cards'] as List).cast<String>();
     return cards.length == cup['size'] && cards.contains('soda') &&
       cards.any(wineCards.contains);
+  }
+
+  String _cupCaption(List<String> cards) {
+    final wines = cards.where(wineCards.contains).toSet();
+    if (wines.length > 1) {
+      return widget.snapshot['allowMixedWine'] == true
+        ? 'Rozé / vegyes (házi)'
+        : 'Vegyes · Küv Évi';
+    }
+    return cards.map(_symbol).join(' ');
   }
 
   String _symbol(String card) => switch (card) {
