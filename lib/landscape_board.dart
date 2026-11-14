@@ -254,7 +254,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
     }
     return Container(
       decoration: _frame(),
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('AKCIÓK', style: TextStyle(
           fontSize: 20, color: Color(0xFFFFE6B5),
@@ -263,7 +263,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
             widget.snapshot['actions'].toString() + ' akció'
           : 'Másik játékos köre',
           style: const TextStyle(color: Color(0xFFACD7C9), fontSize: 12)),
-        const SizedBox(height: 9),
+        const SizedBox(height: 4),
         _action('ELADÁS', Icons.paid, const Color(0xFF9E3C36),
           canAct && slots == 0 && widget.snapshot['actions'] == 2 &&
               ready.isNotEmpty,
@@ -286,7 +286,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           const Color(0xFF466C66), canAct,
           () => send({'type': 'pass'})),
         const Spacer(),
-        Row(children: [
+        SizedBox(height: 30, child: Row(children: [
           const Icon(Icons.auto_stories, size: 17,
             color: Color(0xFFFFD28E)),
           const SizedBox(width: 5),
@@ -295,14 +295,14 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           IconButton(tooltip: 'Szabályok', icon: const Icon(Icons.info_outline,
               size: 20, color: Color(0xFFFFD28E)),
             onPressed: _rulesDialog),
-        ]),
+        ])),
       ]),
     );
   }
 
   Widget _action(String label, IconData icon, Color base, bool enabled,
       VoidCallback callback) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Material(
           color: enabled ? base : const Color(0xFF3A514D),
           elevation: enabled ? 3 : 0,
@@ -311,18 +311,21 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           child: InkWell(
             onTap: enabled ? callback : null,
             borderRadius: BorderRadius.circular(13),
-            child: Container(height: 42,
+            child: Container(height: 34,
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: enabled
                   ? const Color(0xFFE7BC7C) : Colors.white24, width: 1.3)),
               child: Row(children: [
                 const SizedBox(width: 10),
                 Icon(icon, color: enabled ? const Color(0xFFFFE7BD)
-                  : Colors.white38, size: 22),
-                const SizedBox(width: 9),
-                Expanded(child: Text(label, maxLines: 1,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900,
-                    color: enabled ? Colors.white : Colors.white38))),
+                  : Colors.white38, size: 18),
+                const SizedBox(width: 7),
+                Expanded(child: FittedBox(fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(label, maxLines: 1,
+                    style: TextStyle(fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: enabled ? Colors.white : Colors.white38)))),
               ])),
           ),
         ),
@@ -345,13 +348,13 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           const Text('·  POHÁRPIAC',
             style: TextStyle(color: Colors.white70, fontSize: 11)),
         ])),
-      SizedBox(height: 104, child: Row(
+      SizedBox(height: 91, child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var i = 0; i < (widget.snapshot['market'] as List).length; i++)
             Padding(padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(children: [
-                SizedBox(width: 94, height: 74,
+                SizedBox(width: 94, height: 59,
                   child: InkWell(
                     onTap: canAct && widget.snapshot['playSlots'] == 0
                         ? () => send({'type': 'buy', 'indexes': [i]}) : null,
@@ -381,7 +384,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
             Padding(padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Column(mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(width: 105, height: 99,
+                  SizedBox(width: 105, height: 78,
                     child: InkWell(
                       onTap: canAct && selectedCard != null
                         ? () => _playOnCup(selectedCard!, i) : null,
