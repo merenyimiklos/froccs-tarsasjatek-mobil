@@ -36,6 +36,8 @@ class Game {
   final List<int> market = [];
   int turn = 0;
   int actions = 2;
+  int drawActionsThisTurn = 0;
+  int turnNumber = 1;
   int playSlots = 0;
   int finalTurns = -1;
   bool over = false;
@@ -140,7 +142,11 @@ class Game {
 
   Map<String, dynamic> viewFor(String id) {
     return {
-      'turn': currentId, 'actions': actions, 'playSlots': playSlots,
+      'turn': currentId, 'actions': actions,
+      'drawActionsThisTurn': drawActionsThisTurn,
+      'turnNumber': turnNumber,
+      'round': ((turnNumber - 1) ~/ players.length) + 1,
+      'playSlots': playSlots,
       'allowMixedWine': allowMixedWine,
       'deckCount': deck.length, 'finalTurns': finalTurns,
       'over': over, 'message': message, 'market': List<int>.from(market),
@@ -207,6 +213,7 @@ class Game {
       case 'draw':
         if (playSlots > 0) return 'Előbb zárd le a kijátszást.';
         actions--;
+        drawActionsThisTurn++;
         if (players.length == 2) {
           drawChoice = [];
           for (var i = 0; i < 3; i++) {
@@ -476,67 +483,110 @@ class Game {
       }
     }
     turn = (turn + 1) % players.length;
+    turnNumber++;
     actions = 2;
+    drawActionsThisTurn = 0;
     playSlots = 0;
     message = '$currentName következik.';
   }
 
-  /// Deterministic, legal-action-seeking basic bot, intentionally non-cheating.
-  /// Resolve pending bot defence even during a human attacker's turn.
-  /// Otherwise a bot target would wait forever for a nonexistent UI action.
+  /// Whether the next unresolved decision belongs to a bot.
+  bool get hasBotStep {
+    if (over) return false;
+    if (pending != null) {
+      final target = _findPlayer(pending!['target'] as String);
+      final actor = _findPlayer(pending!['actor'] as String);
+      return (target != null && target['bot'] == true &&
+              pending!['phase'] == 'response') ||
+          (actor != null && actor['bot'] == true &&
+              pending!['phase'] == 'decision');
+    }
+    return isBotTurn;
+  }
+
+  /// Apply just one bot decision, so the UI can show bot turns in real time.
+  bool runBotStep() {
+    if (!hasBotStep) return false;
+    if (pending != null) {
+      final target = _findPlayer(pending!['target'] as String);
+      final actor = _findPlayer(pending!['actor'] as String);
+      if (target != null && target['bot'] == true &&
+          pending!['phase'] == 'response') {
+        apply(target['id'] as String, {
+          'type': _hand(target).contains('shield') ? 'defend' : 'takeHit',
+        });
+        return true;
+      }
+      if (actor != null && actor['bot'] == true &&
+          pending!['phase'] == 'decision') {
+        apply(actor['id'] as String, {'type': 'acceptOffer'});
+        return true;
+      }
+      return false;
+    }
+    final bot = current;
+    if (drawChoice != null) {
+      apply(currentId, {
+        'type': 'keepDraw',
+        'drop': random.nextInt(drawChoice!.length),
+      });
+      return true;
+    }
+    if (playSlots > 0) {
+      final move = _findBotPlay() ?? _findBotAttack();
+      apply(currentId, move ?? {'type': 'endPlay'});
+      return true;
+    }
+    final ready = <int>[];
+    for (var i = 0; i < _cups(bot).length; i++) {
+      if (_isReady(_cups(bot)[i])) ready.add(i);
+    }
+    if (actions == 2 && ready.isNotEmpty) {
+      apply(currentId, {'type': 'sell', 'indexes': ready});
+    } else if (_cups(bot).isNotEmpty && _findBotPlay() != null) {
+      apply(currentId, _findBotPlay()!);
+    } else if (_cups(bot).isNotEmpty && _findBotAttack() != null) {
+      apply(currentId, _findBotAttack()!);
+    } else if (_cups(bot).length < 2 && (bot['money'] as int) >= 10 &&
+        market.isNotEmpty) {
+      apply(currentId, {'type': 'buy', 'indexes': [0]});
+    } else {
+      apply(currentId, {'type': 'draw'});
+    }
+    return true;
+  }
+
+  /// Synchronous helper used only in unit tests; production uses timed steps.
   void runBots() {
     var guard = 0;
-    while (!over && guard++ < 120) {
-      if (pending != null) {
-        final target = _findPlayer(pending!['target'] as String);
-        final actor = _findPlayer(pending!['actor'] as String);
-        if (target != null && target['bot'] == true &&
-            pending!['phase'] == 'response') {
-          apply(target['id'] as String, {
-            'type': _hand(target).contains('shield') ? 'defend' : 'takeHit'
-          });
-          continue;
+    while (hasBotStep && guard++ < 120) {
+      runBotStep();
+    }
+  }
+
+  Map<String, dynamic>? _findBotAttack() {
+    final hand = _hand(current);
+    for (var i = 0; i < hand.length; i++) {
+      final card = hand[i];
+      if (!attackCards.contains(card)) continue;
+      for (final target in players) {
+        if (target['id'] == currentId) continue;
+        if (card == 'tip' && _validAttack(card, target, -1)) {
+          return {
+            'type': 'play', 'cardIndex': i, 'target': target['id'], 'cup': -1,
+          };
         }
-        if (actor != null && actor['bot'] == true &&
-            pending!['phase'] == 'decision') {
-          apply(actor['id'] as String, {'type': 'acceptOffer'});
-          continue;
+        for (var cup = 0; cup < _cups(target).length; cup++) {
+          if (_validAttack(card, target, cup)) {
+            return {
+              'type': 'play', 'cardIndex': i,
+              'target': target['id'], 'cup': cup,
+            };
+          }
         }
-        break;
-      }
-      if (!isBotTurn) break;
-      final bot = current;
-      if (drawChoice != null) {
-        apply(currentId, {
-          'type': 'keepDraw',
-          'drop': random.nextInt(drawChoice!.length)
-        });
-        continue;
-      }
-      if (playSlots > 0) {
-        final move = _findBotPlay();
-        if (move == null) {
-          apply(currentId, {'type': 'endPlay'});
-        } else {
-          apply(currentId, move);
-        }
-        continue;
-      }
-      final ready = <int>[];
-      for (var i = 0; i < _cups(bot).length; i++) {
-        if (_isReady(_cups(bot)[i])) ready.add(i);
-      }
-      if (actions == 2 && ready.isNotEmpty) {
-        apply(currentId, {'type': 'sell', 'indexes': ready});
-      } else if (_cups(bot).isNotEmpty && _findBotPlay() != null) {
-        apply(currentId, _findBotPlay()!);
-      } else if (_cups(bot).length < 2 &&
-          (bot['money'] as int) >= 10 && market.isNotEmpty) {
-        apply(currentId, {'type': 'buy', 'indexes': [0]});
-      } else {
-        apply(currentId, {'type': 'draw'});
       }
     }
+    return null;
   }
 
   Map<String, dynamic>? _findBotPlay() {
