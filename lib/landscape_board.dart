@@ -45,7 +45,12 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
   bool get myTurn => widget.snapshot['turn'] == widget.myId &&
       widget.snapshot['over'] != true;
   bool get canAct => myTurn && widget.snapshot['pending'] == null &&
-      widget.snapshot['drawChoice'] == null;
+      widget.snapshot['drawChoice'] == null &&
+      ((widget.snapshot['actions'] as int) > 0 ||
+          (widget.snapshot['playSlots'] as int) > 0);
+  bool get canEndTurn => myTurn && widget.snapshot['pending'] == null &&
+      widget.snapshot['drawChoice'] == null &&
+      (widget.snapshot['playSlots'] as int) == 0;
 
   void send(Map<String, dynamic> action) {
     setState(() => selectedCard = null);
@@ -268,7 +273,9 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           style: const TextStyle(color: Color(0xFFACD7C9), fontSize: 12)),
         const SizedBox(height: 4),
         Text(myTurn
-          ? 'Húzás ebben a körben: ${widget.snapshot['drawActionsThisTurn'] ?? 0}/2'
+          ? (widget.snapshot['actions'] == 0 && slots == 0
+              ? 'Nincs több akció · Zárd le a köröd!'
+              : 'Húzás ebben a körben: ${widget.snapshot['drawActionsThisTurn'] ?? 0}/2')
           : 'A botok kijátsszák a lapjaikat…',
           maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 10, color: Color(0xFFFFD28D))),
@@ -291,9 +298,10 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
               _toast('Válassz egy lapot alul a kezedből!');
             }
           }),
-        _action('KÖR ÁTADÁSA', Icons.skip_next,
-          const Color(0xFF466C66), canAct,
-          () => send({'type': 'pass'})),
+        _action('KÖR BEFEJEZÉSE', Icons.check_circle_outline,
+          (widget.snapshot['actions'] as int) == 0
+              ? const Color(0xFFB98132) : const Color(0xFF466C66),
+          canEndTurn, () => send({'type': 'endTurn'})),
         const Spacer(),
         SizedBox(height: 30, child: Row(children: [
           const Icon(Icons.auto_stories, size: 17,
