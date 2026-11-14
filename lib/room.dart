@@ -11,6 +11,36 @@ import 'game.dart';
 class RoomSession extends ChangeNotifier {
   String myId = _id();
   String myName = 'Játékos';
+  // Two hero choices per player, following the experienced-player setup.
+  final List<String> heroOptions = (heroNames.take(8).toList()
+    ..shuffle(Random.secure())).take(2).toList();
+  String? selectedHero;
+  bool houseRoseMode = false;
+
+  void chooseHero(String hero) {
+    if (!heroOptions.contains(hero) || game != null) return;
+    selectedHero = hero;
+    if (mode == 'online' && _socket != null) {
+      _send({'type': 'pickHero', 'hero': hero});
+    } else if (mode == 'lan' && !host && _socket != null) {
+      _send({'type': 'pickHero', 'hero': hero});
+    } else if (members.any((seat) => seat.id == myId)) {
+      members = [
+        for (final seat in members)
+          seat.id == myId
+            ? Seat(seat.id, seat.name, bot: seat.bot, hero: hero)
+            : seat,
+      ];
+      _notifyMembers();
+    }
+    notifyListeners();
+  }
+
+  void setHouseRoseMode(bool value) {
+    if (game != null || (mode.isNotEmpty && !host)) return;
+    houseRoseMode = value;
+    notifyListeners();
+  }
   String mode = '';
   String code = '';
   String address = '';
@@ -36,7 +66,7 @@ class RoomSession extends ChangeNotifier {
     host = true;
     myName = name.trim().isEmpty ? 'Játékos' : name.trim();
     members = [
-      Seat(myId, myName),
+      Seat(myId, myName, hero: selectedHero),
       for (var i = 1; i <= bots.clamp(1, 5); i++)
         Seat('bot-$i', 'Bot $i', bot: true),
     ];
@@ -48,7 +78,7 @@ class RoomSession extends ChangeNotifier {
     mode = 'lan';
     host = true;
     myName = name.trim().isEmpty ? 'Játékos' : name.trim();
-    members = [Seat(myId, myName)];
+    members = [Seat(myId, myName, hero: selectedHero)];
     try {
       _lanServer = await HttpServer.bind(InternetAddress.anyIPv4, port);
       address = (await _localIp()) + ':$port';
@@ -72,9 +102,23 @@ class RoomSession extends ChangeNotifier {
                   return;
                 }
                 peerId = id;
-                members.add(Seat(id, name.isEmpty ? 'Játékos' : name));
+                final hero = msg['hero'] as String?;
+                members.add(Seat(id, name.isEmpty ? 'Játékos' : name,
+                  hero: hero != null && heroNames.contains(hero) ? hero : null));
                 _peers[id] = ws;
                 _notifyMembers();
+              } else if (msg['type'] == 'pickHero' && peerId.isNotEmpty &&
+                  game == null) {
+                final hero = (msg['hero'] ?? '').toString();
+                if (heroNames.contains(hero)) {
+                  members = [
+                    for (final seat in members)
+                      seat.id == peerId
+                        ? Seat(seat.id, seat.name, bot: seat.bot, hero: hero)
+                        : seat,
+                  ];
+                  _notifyMembers();
+                }
               } else if (msg['type'] == 'action' && peerId.isNotEmpty) {
                 _hostAction(peerId, Map<String, dynamic>.from(msg['command'] as Map));
               }
@@ -120,7 +164,8 @@ class RoomSession extends ChangeNotifier {
       destination = destination.replaceFirst('ws://', '');
       _socket = await WebSocket.connect('ws://$destination');
       _listenClient();
-      _send({'type': 'join', 'id': myId, 'name': myName});
+      _send({'type': 'join', 'id': myId, 'name': myName,
+        'hero': selectedHero});
       address = destination;
     } catch (e) {
       error = 'Csatlakozási hiba: $e';
@@ -154,7 +199,7 @@ class RoomSession extends ChangeNotifier {
       _listenClient();
       _send({
         'type': room == null ? 'create' : 'join',
-        'name': myName, 'id': myId,
+        'name': myName, 'id': myId, 'hero': selectedHero,
         if (room != null) 'code': room,
       });
     } catch (e) {
@@ -177,7 +222,8 @@ class RoomSession extends ChangeNotifier {
             members = [
               for (final item in (msg['members'] as List))
                 Seat((item['id'] as String), (item['name'] as String),
-                    bot: item['bot'] == true),
+                    bot: item['bot'] == true,
+                    hero: item['hero'] as String?),
             ];
             break;
           case 'snapshot':
@@ -216,7 +262,9 @@ class RoomSession extends ChangeNotifier {
     final msg = jsonEncode({
       'type': 'members', 'code': address,
       'members': [
-        for (final s in members) {'id': s.id, 'name': s.name, 'bot': s.bot},
+        for (final s in members) {
+          'id': s.id, 'name': s.name, 'bot': s.bot, 'hero': s.hero
+        },
       ],
     });
     for (final ws in _peers.values) { ws.add(msg); }
@@ -241,7 +289,7 @@ class RoomSession extends ChangeNotifier {
   }
 
   void _start() {
-    game = Game(members);
+    game = Game(members, allowMixedWine: houseRoseMode);
     game!.runBots();
     if (mode == 'online') _send({'type': 'started'});
     _sync();
@@ -269,6 +317,7 @@ class RoomSession extends ChangeNotifier {
       }
       return;
     }
+    error = '';
     game!.runBots();
     _sync();
   }
