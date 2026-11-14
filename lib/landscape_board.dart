@@ -124,7 +124,8 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
       TextStyle(color: Color(0xFFFFD8A2), letterSpacing: 3, fontSize: 12,
         fontWeight: FontWeight.w800)),
     const SizedBox(height: 2),
-    Text(players.length.toString() + ' játékos · ' +
+    Text('Forduló: ${widget.snapshot['round'] ?? 1} · ' +
+        players.length.toString() + ' játékos · ' +
         (widget.snapshot['deckCount'] as int).toString() + ' lap a pakliban',
       style: const TextStyle(color: Color(0xFFCEE9D9), fontSize: 12)),
   ]);
@@ -262,9 +263,15 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
         Text(myTurn
           ? (slots > 0
             ? 'Kijátszás · még $slots lap'
-            : 'A te köröd · ${widget.snapshot['actions']} akció')
+            : 'A te köröd · ${widget.snapshot['actions']}/2 akció')
           : 'Másik játékos köre',
           style: const TextStyle(color: Color(0xFFACD7C9), fontSize: 12)),
+        const SizedBox(height: 4),
+        Text(myTurn
+          ? 'Húzás ebben a körben: ${widget.snapshot['drawActionsThisTurn'] ?? 0}/2'
+          : 'A botok kijátsszák a lapjaikat…',
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10, color: Color(0xFFFFD28D))),
         const SizedBox(height: 4),
         _action('ELADÁS', Icons.paid, const Color(0xFF9E3C36),
           canAct && slots == 0 && widget.snapshot['actions'] == 2 &&
@@ -552,29 +559,66 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
     final market = (widget.snapshot['market'] as List).cast<int>();
     final selected = <int>{};
     final chosen = await showDialog<List<int>>(
-      context: context, builder: (context) => StatefulBuilder(
-        builder: (context, refresh) => AlertDialog(
-          title: const Text('Pohárvásárlás'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('1 pohár: 10 Ft  ·  2 pohár: 40 Ft'),
-            for (var i = 0; i < market.length; i++)
-              CheckboxListTile(
-                title: Text(market[i].toString() + ' dl'),
-                value: selected.contains(i),
-                onChanged: (value) => refresh(() {
-                  if (value == true && selected.length < 2) selected.add(i);
-                  if (value == false) selected.remove(i);
-                })),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Mégse')),
-            FilledButton(
-              onPressed: selected.isNotEmpty
-                ? () => Navigator.pop(context, selected.toList()) : null,
-              child: const Text('Vásárlás')),
-          ],
-        )));
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 18, vertical: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 310),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Pohárvásárlás', style: TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text('1 pohár: 10 Ft · 2 pohár: '
+                    '${me['hero'] == 'Pohárnok' ? 20 : 40} Ft',
+                    style: const TextStyle(fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Flexible(child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: market.length,
+                    itemBuilder: (context, i) => CheckboxListTile(
+                      dense: true,
+                      visualDensity: const VisualDensity(
+                        vertical: -4, horizontal: -2),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      title: Text('${market[i]} dl',
+                        style: const TextStyle(fontSize: 16)),
+                      value: selected.contains(i),
+                      onChanged: (value) => refresh(() {
+                        if (value == true && selected.length < 2) {
+                          selected.add(i);
+                        } else if (value == false) {
+                          selected.remove(i);
+                        }
+                      }),
+                    ),
+                  )),
+                  const SizedBox(height: 6),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    TextButton(onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Mégse')),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: selected.isNotEmpty
+                        ? () => Navigator.pop(
+                            dialogContext, selected.toList())
+                        : null,
+                      child: const Text('Vásárlás'),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     if (chosen != null && chosen.isNotEmpty) {
       send({'type': 'buy', 'indexes': chosen});
     }
