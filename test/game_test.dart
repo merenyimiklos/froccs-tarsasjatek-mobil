@@ -93,4 +93,105 @@ void main() {
     expect(remaining.first['size'], smallest);
   });
 
+  test('Selected character is honoured in a new match', () {
+    final game = Game([
+      Seat('a', 'Anna', hero: 'Küv Évi'),
+      Seat('b', 'Béla', hero: 'Pohárnok'),
+    ]);
+    expect(game.players[0]['hero'], 'Küv Évi');
+    expect(game.players[1]['hero'], 'Pohárnok');
+  });
+
+  test('No duplicate character is allocated', () {
+    final game = Game([
+      Seat('a', 'Anna', hero: 'Küv Évi'),
+      Seat('b', 'Béla', hero: 'Küv Évi'),
+    ]);
+    expect(game.players[0]['hero'], 'Küv Évi');
+    expect(game.players[1]['hero'], isNot('Küv Évi'));
+  });
+
+  test('Official rule rejects mixing wine types, without losing an action', () {
+    final game = Game([
+      Seat('a', 'Anna', hero: 'Pohárnok'),
+      Seat('b', 'Béla'),
+    ]);
+    game.players[0]['hand'] = <String>['barat'];
+    final cups = game.players[0]['cups'] as List;
+    cups[1]['cards'] = <String>['muscat'];
+    final err = game.apply('a', {
+      'type': 'play', 'cardIndex': 0, 'cup': 1,
+    });
+    expect(err, isNotNull);
+    expect(game.actions, 2);
+    expect(game.playSlots, 0);
+    expect(cups[1]['cards'], ['muscat']);
+  });
+
+  test('Mixed wines are legal in the opt-in house-rules mode', () {
+    final game = Game([
+      Seat('a', 'Anna', hero: 'Pohárnok'),
+      Seat('b', 'Béla'),
+    ], allowMixedWine: true);
+    game.players[0]['hand'] = <String>['barat'];
+    final cups = game.players[0]['cups'] as List;
+    cups[1]['cards'] = <String>['muscat'];
+    expect(game.apply('a', {
+      'type': 'play', 'cardIndex': 0, 'cup': 1,
+    }), isNull);
+    expect(cups[1]['cards'], ['muscat', 'barat']);
+    expect(game.actions, 1);
+  });
+
+  test('Küv Évi can combine two different wine types in standard mode', () {
+    final game = Game([
+      Seat('a', 'Anna', hero: 'Küv Évi'),
+      Seat('b', 'Béla'),
+    ]);
+    game.players[0]['hand'] = <String>['barat'];
+    final cups = game.players[0]['cups'] as List;
+    cups[1]['cards'] = <String>['muscat'];
+    expect(game.apply('a', {
+      'type': 'play', 'cardIndex': 0, 'cup': 1,
+    }), isNull);
+    expect(cups[1]['cards'], ['muscat', 'barat']);
+  });
+
+  test('Each turn allows at most two draw actions (four cards for 3 players)', () {
+    final game = Game([
+      Seat('a', 'Anna'),
+      Seat('b', 'Béla'),
+      Seat('c', 'Cecil'),
+    ]);
+    final initialCount = (game.players[0]['hand'] as List).length;
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.actions, 1);
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.turn, 1);
+    expect((game.players[0]['hand'] as List).length, initialCount + 4);
+    expect(game.apply('a', {'type': 'draw'}), isNotNull);
+  });
+
+  test('Players may have no more than three glasses, and failed buy is free', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    game.players[0]['money'] = 100;
+    final result = game.apply('a', {'type': 'buy', 'indexes': [0, 1]});
+    expect(result, isNotNull);
+    expect(game.actions, 2);
+    expect(game.players[0]['money'], 100);
+  });
+
+  test('Glass slot count caps one play action at the number of glasses', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    game.players[0]['hand'] = <String>['muscat', 'soda', 'soda'];
+    expect(game.apply('a', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNull);
+    expect(game.playSlots, 1);
+    expect(game.apply('a', {'type': 'play', 'cardIndex': 0, 'cup': 0}), isNull);
+    expect(game.playSlots, 0);
+    expect(game.actions, 1);
+    // This is a new action, not a third card within the previous play.
+    expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.turn, 1);
+  });
+
 }
