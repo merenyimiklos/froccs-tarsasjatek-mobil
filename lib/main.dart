@@ -84,7 +84,7 @@ class _FroccsPageState extends State<FroccsPage> {
 
   Widget homeScreen() => ListView(padding: const EdgeInsets.all(16), children: [
     const SizedBox(height: 16),
-    const Icon(Icons.local_bar, size: 80, color: Color(0xFFFFD18C)),
+    Image.asset('assets/original/logo.png', height: 100, errorBuilder: (context, error, stack) => const Icon(Icons.local_bar, size: 80, color: Color(0xFFFFD18C))),
     const Text('ÜDV A KOCSMÁBAN!', textAlign: TextAlign.center,
       style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
     const SizedBox(height: 20),
@@ -259,7 +259,7 @@ class _FroccsPageState extends State<FroccsPage> {
                     borderRadius: BorderRadius.circular(12)),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(symbol(hand[i]), style: const TextStyle(fontSize: 30)),
+                      Image.asset('assets/original/card_' + hand[i] + '.png', height: 61, fit: BoxFit.contain, errorBuilder: (context, error, stack) => Text(symbol(hand[i]), style: const TextStyle(fontSize: 30))),
                       Text(cardNames[hand[i]] ?? hand[i],
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
