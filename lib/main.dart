@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'landscape_board.dart';
 import 'game.dart';
 import 'room.dart';
 
-void main() => runApp(const FroccsApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  runApp(const FroccsApp());
+}
 
 class FroccsApp extends StatelessWidget {
   const FroccsApp({super.key});
@@ -65,7 +75,7 @@ class _FroccsPageState extends State<FroccsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: room.state != null ? null : AppBar(
       backgroundColor: const Color(0xFF28534B),
       title: const Text('FRÖCCS', style: TextStyle(
         fontWeight: FontWeight.w900, letterSpacing: 3)),
@@ -75,11 +85,14 @@ class _FroccsPageState extends State<FroccsPage> {
             icon: const Icon(Icons.logout), tooltip: 'Kilépés'),
       ],
     ),
-    body: SafeArea(child: Center(child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 820),
-      child: room.state != null ? gameScreen()
-        : room.mode.isNotEmpty ? lobbyScreen() : homeScreen(),
-    ))),
+    body: SafeArea(
+      child: room.state != null
+        ? LandscapeBoard(snapshot: room.state!, myId: room.myId,
+            onAction: act, onLeave: () => task(room.leave))
+        : Center(child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: room.mode.isNotEmpty ? lobbyScreen() : homeScreen())),
+    ),
   );
 
   Widget homeScreen() => ListView(padding: const EdgeInsets.all(16), children: [
