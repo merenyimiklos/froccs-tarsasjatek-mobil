@@ -52,4 +52,32 @@ void main() {
       expect((player['cups'] as List).map((c) => c['size']).toList(), [2, 3]);
     }
   });
+  test('Invalid card placement does not consume an action', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    game.players[0]['hand'] = <String>['soda'];
+    final error = game.apply('a', {
+      'type': 'play', 'cardIndex': 0, 'cup': 99,
+    });
+    expect(error, isNotNull);
+    expect(game.actions, 2);
+    expect(game.playSlots, 0);
+    expect(game.players[0]['hand'], ['soda']);
+  });
+
+  test('Bots defend when attacked by a human player', () {
+    final game = Game([
+      Seat('a', 'Anna'), Seat('bot-1', 'Bot', bot: true)
+    ]);
+    game.players[0]['hand'] = <String>['bread'];
+    final victim = game.players[1]['cups'] as List;
+    (victim[0]['cards'] as List).add('muscat');
+    final error = game.apply('a', {
+      'type': 'play', 'cardIndex': 0, 'target': 'bot-1', 'cup': 0,
+    });
+    expect(error, isNull);
+    expect(game.pending, isNotNull);
+    game.runBots();
+    expect(game.pending, isNull);
+  });
+
 }
