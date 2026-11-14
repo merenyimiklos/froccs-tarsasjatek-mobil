@@ -62,7 +62,7 @@ class Game {
       ...List.filled(10, 2), ...List.filled(10, 3),
       ...List.filled(6, 5),
     ]);
-    for (final s in seats) {
+    for (var i = 0; i < seats.length; i++) {
       cupDeck.remove(2);
       cupDeck.remove(3);
     }
