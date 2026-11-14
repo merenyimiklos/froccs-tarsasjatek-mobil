@@ -1,4 +1,5 @@
-import 'dart:math';
+import 'dart:math' as math;
+import 'dart:math' show Random;
 
 /// A rules-oriented prototype. No copyrighted artwork or card copy is bundled.
 const cardNames = <String, String>{
@@ -233,13 +234,29 @@ class Game {
         }
         actions--;
         int income = 0;
+        int soldVolume = 0;
+        int largeGlasses = 0;
         for (final index in (indexes..sort((a, b) => b.compareTo(a)))) {
           final cup = _cups(current).removeAt(index);
+          final size = cup['size'] as int;
+          soldVolume += size;
+          if (size == 3 || size == 5) largeGlasses++;
           income += _price(cup);
           discard.addAll(_filled(cup));
-          cupDiscard.add(cup['size'] as int);
+          cupDiscard.add(size);
+        }
+        // Official hero abilities are independent of the selling action.
+        if (current['hero'] == 'Sommelier Pityu' && soldVolume >= 5) {
+          income += largeGlasses * 10;
         }
         current['money'] = (current['money'] as int) + income;
+        if (current['hero'] == 'Mélyivó Fred' && soldVolume >= 5 &&
+            market.isNotEmpty && _cups(current).length < 3) {
+          final smallest = market.reduce(math.min);
+          market.remove(smallest);
+          _cups(current).add({'size': smallest, 'cards': <String>[]});
+          _refillMarket();
+        }
         message = '$currentName $income Ft értékben adott el.';
         break;
       case 'play':
