@@ -154,15 +154,15 @@ class _FroccsScreenState extends State<FroccsScreen> {
 
   Widget _home() => Row(children: [
     SizedBox(width: 490, child: Padding(
-      padding: const EdgeInsets.fromLTRB(42, 95, 10, 35),
+      padding: const EdgeInsets.fromLTRB(42, 78, 10, 20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Image.asset('assets/original/logo.png', height: 100,
+        Image.asset('assets/original/logo.png', height: 75,
           errorBuilder: (context, error, stack) =>
-            const Icon(Icons.wine_bar, size: 95,
+            const Icon(Icons.wine_bar, size: 72,
               color: Color(0xFFFFD8A5))),
         const SizedBox(height: 10),
         const Text('KEVERJ. ALKUDJ.\nNYERJ!', style: TextStyle(
-          fontSize: 42, height: 1.12, letterSpacing: 2,
+          fontSize: 36, height: 1.06, letterSpacing: 2,
           color: Color(0xFFFFE4AE), fontWeight: FontWeight.w900,
           shadows: [Shadow(color: Colors.black87, blurRadius: 8,
             offset: Offset(3, 4))])),
@@ -199,7 +199,7 @@ class _FroccsScreenState extends State<FroccsScreen> {
       ]),
     )),
     Expanded(child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 95, 34, 33),
+      padding: const EdgeInsets.fromLTRB(16, 78, 34, 20),
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: _panelDecoration(),
@@ -239,7 +239,7 @@ class _FroccsScreenState extends State<FroccsScreen> {
       borderRadius: BorderRadius.circular(11),
       child: InkWell(onTap: () => room.chooseHero(hero),
         borderRadius: BorderRadius.circular(11),
-        child: Container(height: 53, padding: const EdgeInsets.all(6),
+        child: Container(height: 47, padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             border: Border.all(color: selected
               ? const Color(0xFFFFE1A0) : const Color(0xFF56806E),
