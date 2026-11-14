@@ -31,7 +31,11 @@ jobs:
           cache: true
 
       - name: Generate native Android scaffold
-        run: flutter create --project-name froccs_mobile --platforms android .
+        run: |
+          flutter create --project-name froccs_mobile --platforms android .
+          # Flutter may generate a template widget test referencing MyApp.
+          # Keep only our own rules-engine tests.
+          rm -f test/widget_test.dart
 
       - name: Enable LAN connections for debug testing
         run: |
