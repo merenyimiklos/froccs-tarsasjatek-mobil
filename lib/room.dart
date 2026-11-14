@@ -17,6 +17,10 @@ class RoomSession extends ChangeNotifier {
   String? selectedHero;
   bool houseRoseMode = false;
 
+  RoomSession() {
+    selectedHero = heroOptions.first;
+  }
+
   void chooseHero(String hero) {
     if (!heroOptions.contains(hero) || game != null) return;
     selectedHero = hero;
