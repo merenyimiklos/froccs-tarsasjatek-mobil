@@ -80,4 +80,17 @@ void main() {
     expect(game.pending, isNull);
   });
 
+  test('Mélyivó Fred receives the smallest market glass when selling 5dl', () {
+    final game = Game([Seat('a', 'Anna'), Seat('b', 'Béla')]);
+    game.players[0]['hero'] = 'Mélyivó Fred';
+    final cups = game.players[0]['cups'] as List;
+    cups[0]['cards'] = <String>['muscat', 'soda'];
+    cups[1]['cards'] = <String>['muscat', 'soda', 'muscat'];
+    final smallest = game.market.reduce((a, b) => a < b ? a : b);
+    expect(game.apply('a', {'type': 'sell', 'indexes': [0, 1]}), isNull);
+    final remaining = game.players[0]['cups'] as List;
+    expect(remaining, hasLength(1));
+    expect(remaining.first['size'], smallest);
+  });
+
 }
