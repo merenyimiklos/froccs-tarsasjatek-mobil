@@ -192,6 +192,8 @@ void main() {
     expect(game.actions, 1);
     // This is a new action, not a third card within the previous play.
     expect(game.apply('a', {'type': 'draw'}), isNull);
+    expect(game.drawChoice, isNotNull);
+    expect(game.apply('a', {'type': 'keepDraw', 'drop': 0}), isNull);
     expect(game.turn, 1);
   });
 
