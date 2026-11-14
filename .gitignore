@@ -1,0 +1,24 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+.metadata
+*.iml
+.idea/
+.vscode/
+# Generated Android scaffold (created on CI)
+android/
+ios/
+macos/
+linux/
+windows/
+web/
+# Node
+node_modules/
+.env
+.DS_Store
