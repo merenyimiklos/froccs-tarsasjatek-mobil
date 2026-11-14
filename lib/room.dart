@@ -56,6 +56,7 @@ class RoomSession extends ChangeNotifier {
   Game? game;
   WebSocket? _socket;
   HttpServer? _lanServer;
+  Timer? _botStepTimer;
   final Map<String, WebSocket> _peers = {};
   static const int port = 43992;
 
@@ -294,9 +295,9 @@ class RoomSession extends ChangeNotifier {
 
   void _start() {
     game = Game(members, allowMixedWine: houseRoseMode);
-    game!.runBots();
     if (mode == 'online') _send({'type': 'started'});
     _sync();
+    _scheduleBotStep();
   }
 
   void action(Map<String, dynamic> command) {
@@ -322,8 +323,23 @@ class RoomSession extends ChangeNotifier {
       return;
     }
     error = '';
-    game!.runBots();
     _sync();
+    _scheduleBotStep();
+  }
+
+  /// Bot turns no longer finish instantly: every move is observable.
+  /// The active human's turn becomes visible only after each bot has acted.
+  void _scheduleBotStep() {
+    _botStepTimer?.cancel();
+    final match = game;
+    if (!host || match == null || !match.hasBotStep) return;
+    _botStepTimer = Timer(const Duration(milliseconds: 480), () {
+      if (!host || game != match || !match.hasBotStep) return;
+      if (match.runBotStep()) {
+        _sync();
+        _scheduleBotStep();
+      }
+    });
   }
 
   void _sync() {
@@ -352,6 +368,8 @@ class RoomSession extends ChangeNotifier {
   }
 
   Future<void> leave({bool notify = true}) async {
+    _botStepTimer?.cancel();
+    _botStepTimer = null;
     final previous = mode;
     mode = '';
     if (previous == 'online' || (previous == 'lan' && !host)) {
