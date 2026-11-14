@@ -167,6 +167,9 @@ void main() {
     expect(game.apply('a', {'type': 'draw'}), isNull);
     expect(game.actions, 1);
     expect(game.apply('a', {'type': 'draw'}), isNull);
+    // Two-player rule: choose two of the three drawn cards first.
+    expect(game.drawChoice, isNotNull);
+    expect(game.apply('a', {'type': 'keepDraw', 'drop': 0}), isNull);
     expect(game.turn, 1);
     expect((game.players[0]['hand'] as List).length, initialCount + 4);
     expect(game.apply('a', {'type': 'draw'}), isNotNull);
