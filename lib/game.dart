@@ -70,11 +70,13 @@ class Game {
     while (market.length < 3 && cupDeck.isNotEmpty) {
       market.add(cupDeck.removeLast());
     }
+    // First-game recommended heroes; the advanced four remain opt-in later.
+    final starterHeroes = heroNames.take(8).toList()..shuffle(random);
     players = [
       for (var i = 0; i < seats.length; i++)
         {
           'id': seats[i].id, 'name': seats[i].name,
-          'bot': seats[i].bot, 'money': 0, 'hero': heroNames[i % 8],
+          'bot': seats[i].bot, 'money': 0, 'hero': starterHeroes[i],
           'hand': <String>[], 'cups': <Map<String, dynamic>>[
             {'size': 2, 'cards': <String>[]},
             {'size': 3, 'cards': <String>[]},
@@ -246,11 +248,8 @@ class Game {
         final card = _hand(current)[cardIndex];
         if (card == 'shield') return 'Ezt a lapot védekezésre tartogasd.';
         if (_cups(current).isEmpty) return 'Kijátszáshoz pohár kell.';
-        if (playSlots == 0) {
-          actions--;
-          playSlots = _cups(current).length;
-        }
-        if (playSlots < 1) return 'Elfogyott a kijátszási keret.';
+        if (playSlots == 0 && actions < 1) return 'Elfogytak az akciók.';
+        if (playSlots < 0) return 'Elfogyott a kijátszási keret.';
         if (wineCards.contains(card) || card == 'soda') {
           final cupIndex = (c['cup'] as num?)?.toInt() ?? -1;
           if (cupIndex < 0 || cupIndex >= _cups(current).length) return 'Válassz poharat.';
@@ -266,6 +265,10 @@ class Game {
               return 'Nem készülhet csak borból vagy csak szódából teli pohár.';
             }
           }
+          if (playSlots == 0) {
+            actions--;
+            playSlots = _cups(current).length;
+          }
           cards.add(_hand(current).removeAt(cardIndex));
           playSlots--;
           message = '$currentName töltött a poharába.';
@@ -275,6 +278,10 @@ class Game {
           if (victim == null || victim['id'] == id) return 'Válassz másik játékost.';
           final cupIndex = (c['cup'] as num?)?.toInt() ?? -1;
           if (!_validAttack(card, victim, cupIndex)) return 'A célpont nem támadható ezzel a lappal.';
+          if (playSlots == 0) {
+            actions--;
+            playSlots = _cups(current).length;
+          }
           _hand(current).removeAt(cardIndex);
           playSlots--;
           pending = {
@@ -282,6 +289,8 @@ class Game {
             'cup': cupIndex, 'offer': 0, 'phase': 'response',
           };
           message = '$currentName támadást indított.';
+        } else {
+          return 'Nem lehet ezt a lapot kijátszani.';
         }
         break;
       default:
@@ -436,30 +445,44 @@ class Game {
   }
 
   /// Deterministic, legal-action-seeking basic bot, intentionally non-cheating.
+  /// Resolve pending bot defence even during a human attacker's turn.
+  /// Otherwise a bot target would wait forever for a nonexistent UI action.
   void runBots() {
-    int guard = 0;
-    while (isBotTurn && guard++ < 100 && !over) {
-      final bot = current;
+    var guard = 0;
+    while (!over && guard++ < 120) {
       if (pending != null) {
-        final target = pending!['target'] as String;
-        final actor = pending!['actor'] as String;
-        if (target == bot['id']) {
-          apply(target, {'type': _hand(bot).contains('shield') ? 'defend' : 'takeHit'});
-        } else if (actor == bot['id'] && pending!['phase'] == 'decision') {
-          apply(actor, {'type': 'acceptOffer'});
-        } else {
-          break;
+        final target = _findPlayer(pending!['target'] as String);
+        final actor = _findPlayer(pending!['actor'] as String);
+        if (target != null && target['bot'] == true &&
+            pending!['phase'] == 'response') {
+          apply(target['id'] as String, {
+            'type': _hand(target).contains('shield') ? 'defend' : 'takeHit'
+          });
+          continue;
         }
-        continue;
+        if (actor != null && actor['bot'] == true &&
+            pending!['phase'] == 'decision') {
+          apply(actor['id'] as String, {'type': 'acceptOffer'});
+          continue;
+        }
+        break;
       }
+      if (!isBotTurn) break;
+      final bot = current;
       if (drawChoice != null) {
-        apply(currentId, {'type': 'keepDraw', 'drop': random.nextInt(drawChoice!.length)});
+        apply(currentId, {
+          'type': 'keepDraw',
+          'drop': random.nextInt(drawChoice!.length)
+        });
         continue;
       }
       if (playSlots > 0) {
-        final play = _findBotPlay();
-        if (play == null) { apply(currentId, {'type': 'endPlay'}); }
-        else { apply(currentId, play); }
+        final move = _findBotPlay();
+        if (move == null) {
+          apply(currentId, {'type': 'endPlay'});
+        } else {
+          apply(currentId, move);
+        }
         continue;
       }
       final ready = <int>[];
@@ -470,7 +493,8 @@ class Game {
         apply(currentId, {'type': 'sell', 'indexes': ready});
       } else if (_cups(bot).isNotEmpty && _findBotPlay() != null) {
         apply(currentId, _findBotPlay()!);
-      } else if (_cups(bot).length < 2 && bot['money'] >= 10 && market.isNotEmpty) {
+      } else if (_cups(bot).length < 2 &&
+          (bot['money'] as int) >= 10 && market.isNotEmpty) {
         apply(currentId, {'type': 'buy', 'indexes': [0]});
       } else {
         apply(currentId, {'type': 'draw'});
