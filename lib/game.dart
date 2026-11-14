@@ -20,12 +20,14 @@ class Seat {
   final String id;
   final String name;
   final bool bot;
-  Seat(this.id, this.name, {this.bot = false});
+  final String? hero;
+  Seat(this.id, this.name, {this.bot = false, this.hero});
 }
 
 /// Host-owned state. Only viewFor() is sent to a player; other hands stay secret.
 class Game {
   final Random random = Random.secure();
+  final bool allowMixedWine;
   late List<Map<String, dynamic>> players;
   final List<String> deck = [];
   final List<String> discard = [];
@@ -41,7 +43,7 @@ class Game {
   Map<String, dynamic>? pending;
   List<String>? drawChoice;
 
-  Game(List<Seat> seats) {
+  Game(List<Seat> seats, {this.allowMixedWine = false}) {
     if (seats.length < 2 || seats.length > 6) {
       throw ArgumentError('2–6 játékos szükséges.');
     }
@@ -71,13 +73,29 @@ class Game {
     while (market.length < 3 && cupDeck.isNotEmpty) {
       market.add(cupDeck.removeLast());
     }
-    // First-game recommended heroes; the advanced four remain opt-in later.
-    final starterHeroes = heroNames.take(8).toList()..shuffle(random);
+    // Honor the lobby choice, but never give the same hero to two players.
+    // The standard game uses the recommended eight, with optional full roster later.
+    final availableHeroes = heroNames.take(8).toList()..shuffle(random);
+    final heroAssignments = <String>[];
+    for (final seat in seats) {
+      final preferred = seat.hero;
+      if (preferred != null && heroNames.contains(preferred) &&
+          !heroAssignments.contains(preferred)) {
+        heroAssignments.add(preferred);
+        availableHeroes.remove(preferred);
+      } else {
+        final fallback = availableHeroes.isNotEmpty
+          ? availableHeroes.removeLast()
+          : (heroNames.where((e) => !heroAssignments.contains(e)).toList()
+              ..shuffle(random)).first;
+        heroAssignments.add(fallback);
+      }
+    }
     players = [
       for (var i = 0; i < seats.length; i++)
         {
           'id': seats[i].id, 'name': seats[i].name,
-          'bot': seats[i].bot, 'money': 0, 'hero': starterHeroes[i],
+          'bot': seats[i].bot, 'money': 0, 'hero': heroAssignments[i],
           'hand': <String>[], 'cups': <Map<String, dynamic>>[
             {'size': 2, 'cards': <String>[]},
             {'size': 3, 'cards': <String>[]},
@@ -123,6 +141,7 @@ class Game {
   Map<String, dynamic> viewFor(String id) {
     return {
       'turn': currentId, 'actions': actions, 'playSlots': playSlots,
+      'allowMixedWine': allowMixedWine,
       'deckCount': deck.length, 'finalTurns': finalTurns,
       'over': over, 'message': message, 'market': List<int>.from(market),
       'pending': pending == null ? null : Map<String, dynamic>.from(pending!),
@@ -275,7 +294,8 @@ class Game {
           if (cards.length >= cup['size']) return 'Tele a pohár.';
           if (wineCards.contains(card) &&
               cards.any((value) => wineCards.contains(value) && value != card) &&
-              current['hero'] != 'Küv Évi') return 'Egy pohárba egyfajta bor kerülhet.';
+              current['hero'] != 'Küv Évi' &&
+              !allowMixedWine) return 'Egy pohárba egyfajta bor kerülhet.';
           if (cards.length + 1 == cup['size']) {
             final next = [...cards, card];
             if (!next.contains('soda') || !next.any(wineCards.contains)) {
