@@ -298,7 +298,7 @@ class RoomSession extends ChangeNotifier {
     }
   }
 
-  Future<void> leave() async {
+  Future<void> leave({bool notify = true}) async {
     final previous = mode;
     mode = '';
     if (previous == 'online' || (previous == 'lan' && !host)) {
@@ -319,13 +319,13 @@ class RoomSession extends ChangeNotifier {
     error = '';
     host = false;
     connecting = false;
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   @override
   void dispose() {
-    // dispose cannot await; close synchronously initiated futures.
-    unawaited(leave());
+    // Close sockets without notifying a disposed ChangeNotifier.
+    unawaited(leave(notify: false));
     super.dispose();
   }
 }
