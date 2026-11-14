@@ -201,10 +201,11 @@ class Game {
       _advanceIfDone();
       return null;
     }
-    if (type == 'pass') {
-      playSlots = 0;
-      actions = 0;
-      _advanceIfDone();
+    if (type == 'endTurn' || type == 'pass') {
+      // The player explicitly confirms the end of their turn. Even after
+      // spending both actions, no automatic advance is permitted.
+      if (playSlots > 0) return 'Előbb fejezd be a kijátszást.';
+      _endTurn();
       return null;
     }
     if (playSlots > 0 && type != 'play') return 'Előbb fejezd be a lapkijátszást.';
@@ -456,8 +457,10 @@ class Game {
 
   void _advanceIfDone() {
     if (pending != null || drawChoice != null || playSlots != 0) return;
-    if (actions > 0) return;
-    _endTurn();
+    if (actions == 0) {
+      message = '$currentName elhasználta a két akcióját. '
+          'A Kör befejezése gombbal add át a kört!';
+    }
   }
 
   void _endTurn() {
@@ -535,6 +538,10 @@ class Game {
     if (playSlots > 0) {
       final move = _findBotPlay() ?? _findBotAttack();
       apply(currentId, move ?? {'type': 'endPlay'});
+      return true;
+    }
+    if (actions == 0) {
+      apply(currentId, {'type': 'endTurn'});
       return true;
     }
     final ready = <int>[];
