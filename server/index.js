@@ -13,6 +13,12 @@ const rooms = new Map();
 const clients = new WeakMap();
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = Number(process.env.MAX_ROOMS || 1000);
+const heroes = new Set([
+  'Mélyivó Fred', 'Löttyintős', 'Küv Évi', 'Pohárnok',
+  'Recycle Béla', 'Sarki Jézus', 'Sommelier Pityu', 'Vízköpő Karesz',
+  'Böske, a Rettentő', 'Hollósi elvtárs', 'Buzgómócsing', 'Icuka',
+]);
+function safeHero(value) { return heroes.has(value) ? value : null; }
 
 function send(ws, packet) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(packet));
@@ -53,7 +59,8 @@ wss.on('connection', (ws) => {
       if (!/^[a-zA-Z0-9-]{5,64}$/.test(id)) return error(ws, 'Érvénytelen azonosító.');
       const code = roomCode();
       const room = {
-        code, hostId: id, members: [{ id, name: cleanName(msg.name), bot: false }],
+        code, hostId: id, members: [{ id, name: cleanName(msg.name), bot: false,
+          hero: safeHero(msg.hero) }],
         peers: new Map([[id, ws]]), started: false, createdAt: Date.now(),
       };
       rooms.set(code, room);
@@ -74,7 +81,8 @@ wss.on('connection', (ws) => {
           room.members.some((member) => member.id === id)) {
         return error(ws, 'Azonosító már foglalt vagy hibás.');
       }
-      room.members.push({ id, name: cleanName(msg.name), bot: false });
+      room.members.push({ id, name: cleanName(msg.name),
+        bot: false, hero: safeHero(msg.hero) });
       room.peers.set(id, ws);
       clients.set(ws, { code, id });
       broadcastMembers(room);
@@ -85,7 +93,15 @@ wss.on('connection', (ws) => {
     const room = roomOf(ws);
     if (!room || !connection) return error(ws, 'Előbb csatlakozz.');
     const { id } = connection;
-    if (msg.type === 'addBot') {
+    if (msg.type === 'pickHero') {
+      if (room.started) return error(ws, 'A játszma már elkezdődött.');
+      const hero = safeHero(msg.hero);
+      if (hero === null) return error(ws, 'Ismeretlen kocsmahős.');
+      const member = room.members.find((m) => m.id === id);
+      if (!member || member.bot) return error(ws, 'Nem választhatsz karaktert.');
+      member.hero = hero;
+      broadcastMembers(room);
+    } else if (msg.type === 'addBot') {
       if (id !== room.hostId || room.started) return error(ws, 'Nem engedélyezett.');
       if (room.members.length >= MAX_PLAYERS) return error(ws, 'Megtelt a szoba.');
       const botId = String(msg.id || '').slice(0, 64);
