@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'landscape_board.dart';
-import 'game.dart';
 import 'room.dart';
 
 Future<void> main() async {
@@ -16,354 +15,369 @@ Future<void> main() async {
 
 class FroccsApp extends StatelessWidget {
   const FroccsApp({super.key});
+
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Fröccs – társasjáték',
     debugShowCheckedModeBanner: false,
+    title: 'Fröccs – társasjáték',
     theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFFFD18C), brightness: Brightness.dark),
-      scaffoldBackgroundColor: const Color(0xFF14302B),
       useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFFFD28D),
+        brightness: Brightness.dark,
+        surface: const Color(0xFF174638)),
+      scaffoldBackgroundColor: const Color(0xFF173C34),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xB0183833),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF6E987E))),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFFFD28D), width: 2)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16, vertical: 10),
+      ),
     ),
-    home: const FroccsPage(),
+    home: const FroccsScreen(),
   );
 }
 
-class FroccsPage extends StatefulWidget {
-  const FroccsPage({super.key});
+class FroccsScreen extends StatefulWidget {
+  const FroccsScreen({super.key});
+
   @override
-  State<FroccsPage> createState() => _FroccsPageState();
+  State<FroccsScreen> createState() => _FroccsScreenState();
 }
 
-class _FroccsPageState extends State<FroccsPage> {
+class _FroccsScreenState extends State<FroccsScreen> {
   final room = RoomSession();
-  final name = TextEditingController(text: 'Játékos');
-  final server = TextEditingController(
-    text: const String.fromEnvironment('FROCCS_SERVER',
+  final playerName = TextEditingController(text: 'Játékos');
+  final server = TextEditingController(text:
+    const String.fromEnvironment('FROCCS_SERVER',
       defaultValue: 'wss://example.org'));
-  final code = TextEditingController();
-  final lanIp = TextEditingController();
+  final joinCode = TextEditingController();
+  final hostAddress = TextEditingController();
+  int selectedMode = 0;
   int botCount = 2;
+  String lastError = '';
 
   @override
   void initState() {
     super.initState();
-    room.addListener(refresh);
+    room.addListener(_refresh);
   }
 
-  void refresh() {
-    if (mounted) setState(() {});
+  void _refresh() {
+    if (!mounted) return;
+    setState(() {});
+    if (room.error.isNotEmpty && room.error != lastError) {
+      lastError = room.error;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(lastError),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF8B4635)));
+      });
+    }
+    if (room.error.isEmpty) lastError = '';
   }
 
   @override
   void dispose() {
-    room.removeListener(refresh);
+    room.removeListener(_refresh);
     room.dispose();
-    name.dispose(); server.dispose(); code.dispose(); lanIp.dispose();
+    playerName.dispose();
+    server.dispose();
+    joinCode.dispose();
+    hostAddress.dispose();
     super.dispose();
   }
 
-  void task(Future<void> Function() fn) {
-    fn().catchError((Object e) {
-      if (mounted) ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(e.toString())));
+  void _task(Future<void> Function() action) {
+    action().catchError((Object e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())));
     });
   }
 
-  void act(Map<String, dynamic> command) => room.action(command);
-
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: room.state != null ? null : AppBar(
-      backgroundColor: const Color(0xFF28534B),
-      title: const Text('FRÖCCS', style: TextStyle(
-        fontWeight: FontWeight.w900, letterSpacing: 3)),
-      actions: [
-        if (room.mode.isNotEmpty)
-          IconButton(onPressed: () => task(room.leave),
-            icon: const Icon(Icons.logout), tooltip: 'Kilépés'),
-      ],
-    ),
-    body: SafeArea(
-      child: room.state != null
-        ? LandscapeBoard(snapshot: room.state!, myId: room.myId,
-            onAction: act, onLeave: () => task(room.leave))
-        : Center(child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            child: room.mode.isNotEmpty ? lobbyScreen() : homeScreen())),
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (room.state != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: LandscapeBoard(
+            snapshot: room.state!,
+            myId: room.myId,
+            onAction: room.action,
+            onLeave: () => _task(room.leave),
+          ),
+        ),
+      );
+    }
+    return Scaffold(
+      body: SafeArea(child: LayoutBuilder(builder: (context, constraints) {
+        return FittedBox(fit: BoxFit.contain, alignment: Alignment.center,
+          child: SizedBox(width: 1180, height: 650,
+            child: Stack(children: [
+              const Positioned.fill(child: WoodBackground()),
+              Positioned(top: 24, left: 35, right: 35,
+                child: Row(children: [
+                  const Icon(Icons.local_bar, size: 26,
+                    color: Color(0xFFFFD28D)),
+                  const SizedBox(width: 10),
+                  const Text('FRÖCCS',
+                    style: TextStyle(fontSize: 29, letterSpacing: 3,
+                      color: Color(0xFFFFE0A1), fontWeight: FontWeight.w900)),
+                  const Spacer(),
+                  const Text('✦  A KOCSMA NYITVA  ✦',
+                    style: TextStyle(fontSize: 13,
+                      color: Color(0xFFFFDFB3), letterSpacing: 2)),
+                  const Spacer(),
+                  if (room.mode.isNotEmpty)
+                    _miniButton('Vissza', Icons.close,
+                      () => _task(room.leave)),
+                ])),
+              if (room.mode.isEmpty) _home()
+              else _lobby(),
+            ]),
+          ));
+      })),
+    );
+  }
 
-  Widget homeScreen() => ListView(padding: const EdgeInsets.all(16), children: [
-    const SizedBox(height: 16),
-    Image.asset('assets/original/logo.png', height: 100, errorBuilder: (context, error, stack) => const Icon(Icons.local_bar, size: 80, color: Color(0xFFFFD18C))),
-    const Text('ÜDV A KOCSMÁBAN!', textAlign: TextAlign.center,
-      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 20),
-    TextField(controller: name, maxLength: 24,
-      decoration: const InputDecoration(labelText: 'Játékosneved',
-        border: OutlineInputBorder())),
-    section('Játék botok ellen', [
-      Row(children: [
-        const Text('Botok száma'),
-        Expanded(child: Slider(min: 1, max: 5, divisions: 4,
-          value: botCount.toDouble(),
-          onChanged: (value) => setState(() => botCount = value.toInt()))),
-        Text(botCount.toString()),
+  Widget _home() => Row(children: [
+    SizedBox(width: 490, child: Padding(
+      padding: const EdgeInsets.fromLTRB(42, 95, 10, 35),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Image.asset('assets/original/logo.png', height: 100,
+          errorBuilder: (context, error, stack) =>
+            const Icon(Icons.wine_bar, size: 95,
+              color: Color(0xFFFFD8A5))),
+        const SizedBox(height: 10),
+        const Text('KEVERJ. ALKUDJ.\nNYERJ!', style: TextStyle(
+          fontSize: 42, height: 1.12, letterSpacing: 2,
+          color: Color(0xFFFFE4AE), fontWeight: FontWeight.w900,
+          shadows: [Shadow(color: Colors.black87, blurRadius: 8,
+            offset: Offset(3, 4))])),
+        const SizedBox(height: 12),
+        const Text('Egy kocsmaasztal. Hat barát. Rengeteg furfang.',
+          style: TextStyle(color: Colors.white, fontSize: 17)),
+        const SizedBox(height: 20),
+        const Text('Fedezd fel Hajnóczy Soma játékának\n'
+          'digitális változatát!', style: TextStyle(
+          color: Color(0xFFD0E8D9), height: 1.6)),
+        const Spacer(),
+        const Text('TESZTVERZIÓ  •  EREDETI GRAFIKÁK HAMAROSAN',
+          style: TextStyle(color: Color(0xFFFFC67F), fontSize: 11,
+            letterSpacing: 1)),
       ]),
-      actionButton('Játék indítása', Icons.smart_toy,
-        () => task(() => room.startBotGame(name.text, botCount))),
-    ]),
-    section('Helyi Wi-Fi játék', [
-      const Text('Ugyanazon a Wi-Fi hálózaton szerver nélkül játszhattok.'),
-      actionButton('Helyi szoba létrehozása', Icons.wifi_tethering,
-        () => task(() => room.createLan(name.text))),
-      TextField(controller: lanIp,
-        decoration: const InputDecoration(labelText: 'Házigazda IP:port',
-          hintText: '192.168.1.10:43992', border: OutlineInputBorder())),
-      actionButton('Csatlakozás IP alapján', Icons.wifi,
-        () => task(() => room.joinLan(name.text, lanIp.text))),
-    ]),
-    section('Online játék', [
+    )),
+    Expanded(child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 95, 34, 33),
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: _panelDecoration(),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('FOGLALJ ASZTALT!', style: TextStyle(
+              color: Color(0xFFFFD99B), fontSize: 25,
+              fontWeight: FontWeight.w900)),
+            const SizedBox(height: 13),
+            TextField(controller: playerName, maxLength: 24,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.person),
+                labelText: 'Játékosnév',
+                counterText: '')),
+            const SizedBox(height: 13),
+            Row(children: [
+              Expanded(child: _modeButton('BOTOK ELLEN', Icons.smart_toy, 0)),
+              const SizedBox(width: 8),
+              Expanded(child: _modeButton('HELYI WI-FI', Icons.wifi, 1)),
+              const SizedBox(width: 8),
+              Expanded(child: _modeButton('ONLINE', Icons.public, 2)),
+            ]),
+            const SizedBox(height: 13),
+            Expanded(child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: _modeDetails(),
+            )),
+          ]),
+      ),
+    )),
+  ]);
+
+  Widget _modeButton(String title, IconData icon, int mode) {
+    final chosen = selectedMode == mode;
+    return InkWell(onTap: () => setState(() => selectedMode = mode),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(duration: const Duration(milliseconds: 200),
+        height: 61, padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: chosen ? const Color(0xFFAC7A38) : const Color(0xFF1C5548),
+          border: Border.all(color: chosen
+            ? const Color(0xFFFFE7B6) : const Color(0xFF518C76))),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, color: const Color(0xFFFFE0A7), size: 23),
+          Text(title, style: const TextStyle(fontSize: 11,
+            fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+        ])),
+    );
+  }
+
+  Widget _modeDetails() {
+    if (selectedMode == 0) {
+      return Column(key: const ValueKey(0),
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Text('Gyakorolj a kocsma törzsvendégei ellen!',
+          style: TextStyle(fontSize: 17)),
+        Row(children: [
+          const Text('Botok száma'),
+          Expanded(child: Slider(
+            value: botCount.toDouble(), min: 1, max: 5, divisions: 4,
+            label: botCount.toString(),
+            onChanged: (value) => setState(() => botCount = value.round()))),
+          Text(botCount.toString(), style: const TextStyle(
+            fontSize: 19, color: Color(0xFFFFD28D))),
+        ]),
+        const Spacer(),
+        _goldButton('PARTI INDÍTÁSA', Icons.play_arrow,
+          () => _task(() => room.startBotGame(playerName.text, botCount))),
+      ]);
+    }
+    if (selectedMode == 1) {
+      return Column(key: const ValueKey(1),
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('Ugyanarra a Wi-Fi hálózatra csatlakozzatok.',
+            style: TextStyle(fontSize: 16)),
+          const SizedBox(height: 10),
+          _goldButton('HELYI SZOBA LÉTREHOZÁSA',
+            Icons.wifi_tethering, () => _task(() =>
+              room.createLan(playerName.text))),
+          const SizedBox(height: 14),
+          TextField(controller: hostAddress,
+            decoration: const InputDecoration(
+              labelText: 'Házigazda IP-címe',
+              hintText: '192.168.1.10:43992')),
+          const SizedBox(height: 10),
+          _greenButton('CSATLAKOZÁS', Icons.login,
+            () => _task(() => room.joinLan(
+              playerName.text, hostAddress.text))),
+        ]);
+    }
+    return Column(key: const ValueKey(2),
+      crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       TextField(controller: server,
-        decoration: const InputDecoration(labelText: 'WebSocket szerver',
-          hintText: 'wss://szervered.hu', border: OutlineInputBorder())),
-      actionButton('Online szoba létrehozása', Icons.public,
-        () => task(() => room.createOnline(name.text, server.text))),
-      TextField(controller: code,
-        decoration: const InputDecoration(labelText: 'Szobakód',
-          border: OutlineInputBorder())),
-      actionButton('Csatlakozás szobakóddal', Icons.group_add,
-        () => task(() => room.joinOnline(name.text, server.text, code.text))),
-    ]),
-    const Text('Fejlesztői prototípus. Az eredeti grafikai állományokat '
-      'az engedélyezett forrásfájlok beillesztése után integráljuk.',
-      textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
-  ]);
-
-  Widget lobbyScreen() => ListView(padding: const EdgeInsets.all(16), children: [
-    const Icon(Icons.groups, size: 70),
-    Text(room.mode == 'online' ? 'ONLINE SZOBA' : 'HELYI SZOBA',
-      textAlign: TextAlign.center, style: const TextStyle(fontSize: 24)),
-    SelectableText(room.mode == 'online' ? 'Szobakód: ' + room.code
-      : 'Helyi cím: ' + room.address, textAlign: TextAlign.center),
-    if (room.connecting) const LinearProgressIndicator(),
-    if (room.error.isNotEmpty)
-      Text(room.error, style: const TextStyle(color: Colors.orange)),
-    section('Résztvevők: ' + room.members.length.toString() + '/6', [
-      for (final member in room.members)
-        ListTile(
-          leading: Icon(member.bot ? Icons.smart_toy : Icons.person),
-          title: Text(member.name),
-          subtitle: member.id == room.myId ? const Text('Te') : null),
-    ]),
-    if (room.host) ...[
-      actionButton('Bot hozzáadása', Icons.smart_toy, room.addBot),
-      actionButton('Játék indítása', Icons.play_arrow, room.start),
-    ] else const Text('A házigazda indítja a játékot.'),
-  ]);
-
-  Widget gameScreen() {
-    final snapshot = room.state!;
-    final players = (snapshot['players'] as List).cast<Map>();
-    final mine = players.firstWhere((p) => p['id'] == room.myId,
-      orElse: () => players.first);
-    final myTurn = snapshot['turn'] == room.myId && snapshot['over'] != true;
-    final pending = snapshot['pending'] as Map?;
-    final choice = snapshot['drawChoice'] as List?;
-    final active = myTurn && pending == null && choice == null;
-    final playerTurn = players.firstWhere((p) => p['id'] == snapshot['turn']);
-    final hand = (mine['hand'] as List).cast<String>();
-    final cups = mine['cups'] as List;
-
-    return ListView(padding: const EdgeInsets.all(12), children: [
-      section('Asztal', [
-        Text(snapshot['over'] == true ? 'ZÁRÓRA'
-          : 'Most következik: ' + playerTurn['name'].toString(),
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-        Text('Akciók: ' + snapshot['actions'].toString() +
-          ' · Pakli: ' + snapshot['deckCount'].toString()),
-        if (snapshot['playSlots'] != 0)
-          Text('Még kijátszható kártyák: ' + snapshot['playSlots'].toString()),
-        if (snapshot['finalTurns'] != -1)
-          const Text('Utolsó körök!', style: TextStyle(color: Colors.orange)),
-        Text(snapshot['message'].toString()),
-        if (room.error.isNotEmpty)
-          Text(room.error, style: const TextStyle(color: Colors.orange)),
-      ]),
-      section('Játékosok', [
-        for (final player in players)
-          Card(color: snapshot['turn'] == player['id']
-              ? const Color(0xFF37675E) : null,
-            child: Padding(padding: const EdgeInsets.all(8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Icon(player['bot'] == true ? Icons.smart_toy : Icons.person, size: 18),
-                const SizedBox(width: 6),
-                Expanded(child: Text(player['name'].toString() +
-                  ' · ' + player['hero'].toString())),
-                Text(player['money'].toString() + ' Ft'),
-              ]),
-              Text(player['handCount'].toString() + ' lap a kézben',
-                style: const TextStyle(fontSize: 12)),
-              Wrap(spacing: 6, children: [
-                for (final cup in (player['cups'] as List))
-                  Chip(label: Text(cup['size'].toString() + ' dl · ' +
-                    (cup['cards'] as List).length.toString() +
-                    '/' + cup['size'].toString() + ' ' +
-                    (cup['cards'] as List).map((e) => symbol(e.toString())).join(' '))),
-              ]),
-            ]))),
-      ]),
-      if (snapshot['over'] == true)
-        actionButton('Új játék', Icons.home, () => task(room.leave))
-      else if (pending != null)
-        section('Támadás / alku', [
-          Text('Támadás: ' + (cardNames[pending['card']] ?? 'Ismeretlen')),
-          if (pending['target'] == room.myId && pending['phase'] == 'response') ...[
-            actionButton('Ezt neked! védekezés', Icons.shield,
-              () => act({'type': 'defend'})),
-            actionButton('Támadás elfogadása', Icons.gavel,
-              () => act({'type': 'takeHit'})),
-            actionButton('10 Ft alku', Icons.handshake,
-              () => act({'type': 'offer', 'amount': 10})),
-            actionButton('20 Ft alku', Icons.handshake,
-              () => act({'type': 'offer', 'amount': 20})),
-          ] else if (pending['actor'] == room.myId && pending['phase'] == 'decision') ...[
-            Text('Ajánlat: ' + pending['offer'].toString() + ' Ft'),
-            actionButton('Elfogadom', Icons.check,
-              () => act({'type': 'acceptOffer'})),
-            actionButton('Elutasítom', Icons.close,
-              () => act({'type': 'rejectOffer'})),
-          ] else const Text('A másik játékos dönt.'),
-        ])
-      else if (choice != null)
-        section('Válassz két kártyát!', [
-          if (myTurn) for (var i = 0; i < choice.length; i++)
-            actionButton((cardNames[choice[i]] ?? choice[i].toString()) + ' eldobása',
-              Icons.delete_outline,
-              () => act({'type': 'keepDraw', 'drop': i}))
-          else const Text('Másik játékos választ.'),
-        ])
-      else ...[
-        section('Pohárpiac', [
-          Wrap(spacing: 8, children: [
-            for (var i = 0; i < (snapshot['market'] as List).length; i++)
-              OutlinedButton(
-                onPressed: active && snapshot['playSlots'] == 0
-                  ? () => act({'type': 'buy', 'indexes': [i]}) : null,
-                child: Text(snapshot['market'][i].toString() + ' dl · 10 Ft')),
-          ]),
-          actionButton('Két első pohár megvétele (40 Ft)',
-            Icons.add_shopping_cart, () => act({'type': 'buy', 'indexes': [0, 1]})),
-        ]),
-        section('Lapjaid', [
-          Text('Pénzed: ' + mine['money'].toString() + ' Ft'),
-          Wrap(spacing: 7, runSpacing: 7, children: [
-            for (var i = 0; i < hand.length; i++)
-              InkWell(
-                onTap: active ? () => chooseCard(hand[i], i, mine, players) : null,
-                child: Container(width: 105, height: 128,
-                  decoration: BoxDecoration(
-                    color: attackCards.contains(hand[i])
-                      ? const Color(0xFF8F4649)
-                      : const Color(0xFF46665D),
-                    borderRadius: BorderRadius.circular(12)),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/original/card_' + hand[i] + '.png', height: 61, fit: BoxFit.contain, errorBuilder: (context, error, stack) => Text(symbol(hand[i]), style: const TextStyle(fontSize: 30))),
-                      Text(cardNames[hand[i]] ?? hand[i],
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ]))),
-          ]),
-        ]),
-        if (active) section('Akciók', [
-          actionButton('Két kártya húzása', Icons.style,
-            () => act({'type': 'draw'})),
-          if (snapshot['actions'] == 2 && cups.any((c) => ready(c as Map)))
-            actionButton('Kész fröccsök eladása', Icons.paid,
-              () => act({'type': 'sell', 'indexes': [
-                for (var i = 0; i < cups.length; i++)
-                  if (ready(cups[i] as Map)) i,
-              ]})),
-          if (snapshot['playSlots'] != 0)
-            actionButton('Kijátszás befejezése', Icons.check,
-              () => act({'type': 'endPlay'})),
-          actionButton('Kör befejezése', Icons.skip_next,
-            () => act({'type': 'pass'})),
-        ]),
-      ],
+        decoration: const InputDecoration(
+          labelText: 'Online szerver',
+          hintText: 'wss://sajat-szerver.hu')),
+      const SizedBox(height: 10),
+      _goldButton('ONLINE SZOBA LÉTREHOZÁSA', Icons.add_circle,
+        () => _task(() =>
+          room.createOnline(playerName.text, server.text))),
+      const SizedBox(height: 9),
+      TextField(controller: joinCode,
+        textCapitalization: TextCapitalization.characters,
+        decoration: const InputDecoration(labelText: 'Hatjegyű szobakód')),
+      const SizedBox(height: 9),
+      _greenButton('BELÉPÉS SZOBAKÓDDAL', Icons.login,
+        () => _task(() => room.joinOnline(
+          playerName.text, server.text, joinCode.text))),
     ]);
   }
 
-  bool ready(Map cup) {
-    final cards = (cup['cards'] as List).cast<String>();
-    return cards.length == cup['size'] && cards.contains('soda') &&
-      cards.any(wineCards.contains);
-  }
-
-  String symbol(String value) {
-    if (value == 'soda') return '💧';
-    if (value == 'muscat') return '🟡';
-    if (value == 'barat') return '⚪';
-    if (value == 'veltelini') return '🟢';
-    return '🃏';
-  }
-
-  Future<void> chooseCard(String card, int index, Map me, List<Map> players) async {
-    if (card == 'shield') return;
-    if (attackCards.contains(card)) {
-      final opponents = players.where((p) => p['id'] != room.myId).toList();
-      final opponent = await showDialog<String>(context: context,
-        builder: (ctx) => SimpleDialog(title: const Text('Célpont'),
-          children: [
-            for (final p in opponents)
-              SimpleDialogOption(child: Text(p['name'].toString()),
-                onPressed: () => Navigator.pop(ctx, p['id'] as String)),
-          ]));
-      if (!mounted || opponent == null) return;
-      final victim = opponents.firstWhere((p) => p['id'] == opponent);
-      int targetCup = -1;
-      if (card != 'tip') {
-        final choice = await chooseCup(victim['cups'] as List);
-        if (!mounted || choice == null) return;
-        targetCup = choice;
-      }
-      act({'type': 'play', 'cardIndex': index,
-        'target': opponent, 'cup': targetCup});
-    } else {
-      final choice = await chooseCup(me['cups'] as List);
-      if (!mounted || choice == null) return;
-      act({'type': 'play', 'cardIndex': index, 'cup': choice});
-    }
-  }
-
-  Future<int?> chooseCup(List cups) => showDialog<int>(context: context,
-    builder: (ctx) => SimpleDialog(title: const Text('Válassz poharat'),
+  Widget _lobby() => Center(child: Container(
+    width: 790, height: 514,
+    margin: const EdgeInsets.only(top: 60),
+    padding: const EdgeInsets.all(27),
+    decoration: _panelDecoration(),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < cups.length; i++)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, i),
-            child: Text((i + 1).toString() + '. pohár · ' +
-              cups[i]['size'].toString() + ' dl'),
-          ),
-      ]));
+      const Text('ASZTALFOGLALÁS',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 29, fontWeight: FontWeight.w900,
+          color: Color(0xFFFFDE9A), letterSpacing: 2)),
+      const SizedBox(height: 7),
+      SelectableText(room.mode == 'online'
+        ? 'SZOBÁD KÓDJA: ' + (room.code.isEmpty ? 'KAPCSOLÓDÁS…' : room.code)
+        : 'HELYI CÍM: ' + room.address,
+        textAlign: TextAlign.center, style: const TextStyle(
+          fontSize: 18, color: Color(0xFFBEE3CE))),
+      if (room.connecting) const LinearProgressIndicator(),
+      const SizedBox(height: 15),
+      Row(children: [
+        Text('JÁTÉKOSOK  ' + room.members.length.toString() + ' / 6',
+          style: const TextStyle(color: Color(0xFFFFD49A),
+            fontWeight: FontWeight.bold, fontSize: 17)),
+        const Spacer(),
+        if (room.host) _miniButton('BOT HOZZÁADÁSA',
+          Icons.smart_toy, room.addBot),
+      ]),
+      const SizedBox(height: 9),
+      Expanded(child: ListView(
+        children: [
+          for (final member in room.members)
+            Card(color: const Color(0xFF225446),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: const Color(0xFFC18B50),
+                  child: Icon(member.bot ? Icons.smart_toy : Icons.person,
+                    color: const Color(0xFF143C33))),
+                title: Text(member.name),
+                trailing: member.id == room.myId
+                  ? const Text('TE', style: TextStyle(
+                    color: Color(0xFFFFD794))) : null,
+              )),
+        ])),
+      if (room.host) _goldButton('KEZDŐDHET A JÁTÉK!',
+        Icons.play_arrow, room.start)
+      else const Padding(padding: EdgeInsets.all(14),
+        child: Text('A házigazda indítja a partit…',
+          textAlign: TextAlign.center)),
+      if (room.error.isNotEmpty)
+        Text(room.error, style: const TextStyle(color: Color(0xFFFF9988))),
+    ])),
+  );
 
-  Widget section(String title, List<Widget> contents) =>
-    Card(margin: const EdgeInsets.only(bottom: 12), child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(title, style: const TextStyle(fontSize: 18,
-          fontWeight: FontWeight.bold, color: Color(0xFFFFD18C))),
-        const SizedBox(height: 8),
-        for (final item in contents) Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5), child: item),
-      ])));
+  BoxDecoration _panelDecoration() => BoxDecoration(
+    borderRadius: BorderRadius.circular(22),
+    gradient: const LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xF21A5042), Color(0xFB0C302C)]),
+    border: Border.all(color: const Color(0xFFC49A57), width: 2),
+    boxShadow: const [
+      BoxShadow(color: Color(0xAA000000), blurRadius: 22,
+        offset: Offset(4, 8)),
+    ],
+  );
 
-  Widget actionButton(String title, IconData icon, VoidCallback onPressed) =>
-    FilledButton.icon(onPressed: onPressed, icon: Icon(icon),
-      label: Text(title),
-      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)));
+  Widget _goldButton(String label, IconData icon, VoidCallback onPressed) =>
+    _button(label, icon, onPressed, const Color(0xFFB3833C));
+
+  Widget _greenButton(String label, IconData icon, VoidCallback onPressed) =>
+    _button(label, icon, onPressed, const Color(0xFF286D5A));
+
+  Widget _button(String label, IconData icon, VoidCallback onPressed, Color color) =>
+    Material(color: color, borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        onTap: onPressed, borderRadius: BorderRadius.circular(13),
+        child: Container(height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: const Color(0xFFFFDC9F))),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, color: const Color(0xFFFFE6B7)),
+            const SizedBox(width: 9),
+            Text(label, style: const TextStyle(
+              fontWeight: FontWeight.w900, letterSpacing: 0.7)),
+          ]))));
+
+  Widget _miniButton(String label, IconData icon, VoidCallback onPressed) =>
+    OutlinedButton.icon(onPressed: onPressed,
+      icon: Icon(icon, color: const Color(0xFFFFD89B)),
+      label: Text(label, style: const TextStyle(
+        color: Color(0xFFFFD89B))));
 }
