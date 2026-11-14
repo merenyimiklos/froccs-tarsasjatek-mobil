@@ -77,9 +77,13 @@ class _FroccsScreenState extends State<FroccsScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(lastError),
+          SnackBar(content: Text(lastError, maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+            width: 410,
+            duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF8B4635)));
+            showCloseIcon: true,
+            backgroundColor: const Color(0xFF7A372B)));
       });
     }
     if (room.error.isEmpty) lastError = '';
@@ -169,6 +173,25 @@ class _FroccsScreenState extends State<FroccsScreen> {
         const Text('Fedezd fel Hajnóczy Soma játékának\n'
           'digitális változatát!', style: TextStyle(
           color: Color(0xFFD0E8D9), height: 1.6)),
+        const SizedBox(height: 12),
+        const Text('VÁLASSZ KETTŐ KOCSMAHŐS KÖZÜL',
+          style: TextStyle(color: Color(0xFFFFD28D), fontSize: 14,
+            fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+        const SizedBox(height: 6),
+        Row(children: [
+          for (final hero in room.heroOptions) ...[
+            Expanded(child: _heroOption(hero)),
+            const SizedBox(width: 8),
+          ],
+        ]),
+        const SizedBox(height: 7),
+        Row(children: [
+          Checkbox(value: room.houseRoseMode,
+            activeColor: const Color(0xFFB98E51),
+            onChanged: (value) => room.setHouseRoseMode(value ?? false)),
+          const Expanded(child: Text('Házi szabály: vegyes borok engedélyezése',
+            style: TextStyle(fontSize: 12, color: Colors.white70))),
+        ]),
         const Spacer(),
         const Text('TESZTVERZIÓ  •  EREDETI GRAFIKÁK HAMAROSAN',
           style: TextStyle(color: Color(0xFFFFC67F), fontSize: 11,
@@ -208,6 +231,32 @@ class _FroccsScreenState extends State<FroccsScreen> {
       ),
     )),
   ]);
+
+  Widget _heroOption(String hero) {
+    final selected = room.selectedHero == hero;
+    return Material(
+      color: selected ? const Color(0xFF9C6D37) : const Color(0xFF1C5046),
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(onTap: () => room.chooseHero(hero),
+        borderRadius: BorderRadius.circular(11),
+        child: Container(height: 53, padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            border: Border.all(color: selected
+              ? const Color(0xFFFFE1A0) : const Color(0xFF56806E),
+              width: selected ? 2 : 1),
+            borderRadius: BorderRadius.circular(11)),
+          child: Row(children: [
+            Icon(selected ? Icons.verified : Icons.person_outline,
+              color: const Color(0xFFFFE1A0), size: 19),
+            const SizedBox(width: 5),
+            Expanded(child: Text(hero, maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12,
+                fontWeight: FontWeight.bold))),
+          ]),
+        )),
+    );
+  }
 
   Widget _modeButton(String title, IconData icon, int mode) {
     final chosen = selectedMode == mode;
@@ -307,7 +356,22 @@ class _FroccsScreenState extends State<FroccsScreen> {
         textAlign: TextAlign.center, style: const TextStyle(
           fontSize: 18, color: Color(0xFFBEE3CE))),
       if (room.connecting) const LinearProgressIndicator(),
-      const SizedBox(height: 15),
+      const SizedBox(height: 9),
+      const Text('A TE KOCSMAHŐSÖD', style: TextStyle(
+        fontWeight: FontWeight.w900, color: Color(0xFFFFD9A7))),
+      const SizedBox(height: 6),
+      Row(children: [
+        for (final hero in room.heroOptions) ...[
+          Expanded(child: _heroOption(hero)),
+          const SizedBox(width: 10),
+        ],
+      ]),
+      if (room.host) Row(children: [
+        Checkbox(value: room.houseRoseMode,
+          onChanged: (value) => room.setHouseRoseMode(value ?? false)),
+        const Text('Házi szabály: vegyes borok'),
+      ]),
+      const SizedBox(height: 8),
       Row(children: [
         Text('JÁTÉKOSOK  ' + room.members.length.toString() + ' / 6',
           style: const TextStyle(color: Color(0xFFFFD49A),
