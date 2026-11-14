@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'game.dart';
+import 'card_art.dart';
 
 typedef ActionSender = void Function(Map<String, dynamic> action);
 
@@ -746,12 +747,6 @@ class FroccsCard extends StatelessWidget {
       'shield' => const Color(0xFFD15E48),
       _ => const Color(0xFFCD6245),
     };
-    final symbol = switch (card) {
-      'soda' => '💧', 'muscat' => '🍇', 'barat' => '🍷',
-      'veltelini' => '🌿', 'bread' => '🍞', 'spill' => '💦',
-      'tip' => '🪙', 'break' => '🍸', 'shield' => '🛡️',
-      _ => '🃏',
-    };
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       width: 98, height: 135,
@@ -777,8 +772,9 @@ class FroccsCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 gradient: const RadialGradient(
                   colors: [Color(0xFFFFECD1), Color(0xFFE9D2A8)])),
-              child: Center(child: Text(symbol,
-                style: const TextStyle(fontSize: 46)))),
+              child: CustomPaint(
+                painter: PlaceholderCardArt(card),
+                child: const SizedBox.expand())),
             Expanded(child: Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 3),
