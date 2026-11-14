@@ -4,9 +4,11 @@ Hajnóczy Soma **Fröccs** társasjátékának mobilos, közösségi prototípus
 A cél az eredeti társasjáték digitális, 2–6 fős változata, közös Wi-Fi-n,
 online szobakóddal, vagy botokkal.
 
-## Jelenlegi állapot (0.1.0, technikai prototípus)
+## Jelenlegi állapot (0.2.0, fekvő nézetű technikai prototípus)
 
-- Flutter Android felület magyar menükkel, asztallal, poharakkal és játékosokkal.
+- Kizárólag fekvő (landscape) Flutter Android felület, teljes képernyős faasztalos játéknézettel, arany/zöld retró vizuális stílussal, saját kézzel, ellenfélkártyákkal és kocsmapulttal.
+- Új, egységes kocsmai főmenü és lobby; kártyakiválasztás, célpontválasztás és vizuális poharak.
+- Eredeti lapképek automatikus betöltési helyei, amint a beszkennelt PNG-k rendelkezésre állnak; hiányukban ideiglenes rajzos kártyák.
 - 106 lapos fröccspakli a hivatalos összesített típusmennyiségekkel.
 - Alap kétakciós kör, húzás, pohárvétel, kijátszás, eladás, körvége.
 - 2 játékosnál három lapból kettő megtartása.
@@ -24,8 +26,8 @@ Az alábbiak fejlesztést és fizikai kártyás ellenőrzést igényelnek:
 - A 19 szívatáskártya pontos altípusonkénti darabszáma még nincs
   ellenőrizve; a pakli jelenleg 5/5/5/4 elosztást használ.
 - A 26 pohár pontos 2/3/5 dl-es eloszlását még ellenőrizni kell.
-- A 12 kocsmahős képessége közül csak a Pohárnok árkedvezménye és
-  Küv Évi pohárkorlátozás-feloldása van részben kezelve.
+- A 12 kocsmahős képessége közül a Pohárnok árkedvezménye, Mélyivó Fred legkisebb pohár jutalma és Sommelier Pityu pénzbónusza kezelve van; Küv Évi pohárkorlátozás-feloldása részben kezelt.
+  A többi kocsmahős még fejlesztésre szorul.
   A karakterválasztás, a többi egyedi képesség és a kezdő kiosztás
   még nincs véglegesítve.
 - A teljes alku (kártyák kézből kézbe / pohárba helyezése, szabad
@@ -104,7 +106,7 @@ de versenyszerű éles játékhoz a szabálymotort autoritatív szerverre kell v
 
 A felhasználó Hajnóczy Somával egyeztetett, és az eredeti grafikák használatához
 engedélyt jelzett. A tényleges magas felbontású grafikai fájlokat még nem kaptuk meg.
-A kód `assets/original/logo.png`, valamint
+A kód `assets/original/logo.png`, `assets/original/hero_<azonosító>.png`, valamint
 `assets/original/card_<azonosító>.png` formátumokat keres;
 hiányuk esetén szöveges/szimbólumos kártyákat jelenít meg.
 Az eredeti grafikai csomag beillesztése után a játék újra buildelhető.
@@ -116,9 +118,14 @@ kereteit a bemutatás/publikálás előtt írásban ajánlott rögzíteni.
 
 - `lib/game.dart`: lokális szabálymotor és botok.
 - `lib/room.dart`: lobby, LAN WebSocket szerver/kliens és online kliens.
-- `lib/main.dart`: Flutter UI.
+- `lib/main.dart`: landscape főmenü és lobby.
+- `lib/landscape_board.dart`: 1200×660-as, telefonra adaptív asztalnézet, poharak, kártyák, akciók, alku UI és erős vizuális keretrendszer.
 - `server/index.js`: online lobby relay.
 - `test/game_test.dart`: alap unit tesztek.
 - `.github/workflows/android-apk.yml`: debug APK CI.
 
 A repo még nem tartalmaz kész, kiadáshoz szükséges eredeti kártyaképeket.
+
+## Bemutatás Soma felé
+
+A jelenlegi UI az eredeti játék látványára utaló, **önálló programkóddal rajzolt helyettesítő grafika**. A szkennelt kártyaképeket a `assets/original/` mappába kell elhelyezni. Ezt követően a megjelenítés automatikusan az eredeti kártyafrontokat használja. Az alkalmazás **még prototípus**, nem teljesen szabályhű: a hiteles itallap-árakat és a 19 szívatáskártya részletes altípuseloszlását külön ellenőrizni kell, illetve a kocsmahősök és az alku teljes szabályait is be kell fejezni. A bemutatóban ezt egyértelműen jelezni kell.
