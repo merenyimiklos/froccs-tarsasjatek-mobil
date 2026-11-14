@@ -268,7 +268,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           const Color(0xFF277A66), canAct && slots == 0,
           _buySelection),
         _action(slots > 0 ? 'KIJÁTSZÁS LEZÁRÁSA' : 'KIJÁTSZÁS',
-          Icons.playing_cards, const Color(0xFFAD7925), canAct,
+          Icons.style, const Color(0xFFAD7925), canAct,
           () {
             if (slots > 0) {
               send({'type': 'endPlay'});
