@@ -197,4 +197,44 @@ void main() {
     expect(game.turn, 1);
   });
 
+  test('Two draw actions exhaust human turn even with automatic bot opponents', () {
+    final game = Game([
+      Seat('human', 'Ember'),
+      Seat('bot-1', 'Bot 1', bot: true),
+      Seat('bot-2', 'Bot 2', bot: true),
+    ]);
+    expect(game.turnNumber, 1);
+    expect(game.actions, 2);
+    expect(game.apply('human', {'type': 'draw'}), isNull);
+    expect(game.actions, 1);
+    expect(game.drawActionsThisTurn, 1);
+    expect(game.apply('human', {'type': 'draw'}), isNull);
+    expect(game.turnNumber, 2);
+    expect(game.currentId, 'bot-1');
+    expect(game.drawActionsThisTurn, 0);
+    final handSize = (game.players[0]['hand'] as List).length;
+    expect(handSize, 9);
+    expect(game.apply('human', {'type': 'draw'}), isNotNull);
+    expect((game.players[0]['hand'] as List).length, handSize);
+    game.runBots();
+    expect(game.currentId, 'human');
+    expect(game.turnNumber, 4);
+    expect(game.drawActionsThisTurn, 0);
+    expect(game.actions, 2);
+    expect(game.apply('human', {'type': 'draw'}), isNull);
+    expect(game.drawActionsThisTurn, 1);
+  });
+
+  test('A draw always consumes an action even with an empty deck', () {
+    final game = Game([
+      Seat('human', 'Ember'), Seat('bot-1', 'Bot 1', bot: true),
+      Seat('bot-2', 'Bot 2', bot: true),
+    ]);
+    game.deck.clear();
+    game.discard.clear();
+    expect(game.apply('human', {'type': 'draw'}), isNull);
+    expect(game.actions, 1);
+    expect(game.drawActionsThisTurn, 1);
+  });
+
 }
