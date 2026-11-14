@@ -139,30 +139,30 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           decoration: _frame(active: active),
           padding: const EdgeInsets.all(10),
           child: Row(children: [
-            CircleAvatar(radius: 32, backgroundColor: const Color(0xFFB17850),
+            CircleAvatar(radius: 26, backgroundColor: const Color(0xFFB17850),
               child: Icon(p['bot'] == true ? Icons.smart_toy : Icons.person,
-                size: 38, color: const Color(0xFFFFE0A5))),
+                size: 30, color: const Color(0xFFFFE0A5))),
             const SizedBox(width: 9),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(p['name'].toString(), overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
                     color: Color(0xFFFFE8BA))),
                 Text(p['hero'].toString(), maxLines: 1,
                   overflow: TextOverflow.ellipsis, style: const TextStyle(
-                    fontSize: 11, color: Color(0xFFAED7C9))),
-                const SizedBox(height: 5),
+                    fontSize: 10, color: Color(0xFFAED7C9))),
+                const SizedBox(height: 2),
                 Text('🪙 ' + p['money'].toString() + ' Ft  ·  ' +
                     p['handCount'].toString() + ' lap',
-                  style: const TextStyle(fontSize: 13, color: Colors.white)),
+                  style: const TextStyle(fontSize: 11, color: Colors.white)),
                 Text((p['cups'] as List).map((c) =>
                       c['size'].toString() + ' dl: ' +
                       (c['cards'] as List).length.toString())
                     .join('    '), maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFFAD48C))),
+                  style: const TextStyle(fontSize: 10, color: Color(0xFFFAD48C))),
               ],
             )),
           ]),
@@ -433,9 +433,9 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('SAJÁT KARAKTER', style: TextStyle(
         fontSize: 11, color: Color(0xFFFFC77E), fontWeight: FontWeight.bold)),
-      const SizedBox(height: 6),
+      const SizedBox(height: 4),
       Row(children: [
-        SizedBox(width: 58, height: 58,
+        SizedBox(width: 48, height: 58,
           child: ClipOval(child: Image.asset(
             'assets/original/hero_' + _heroSlug(me['hero'].toString()) + '.png',
             fit: BoxFit.cover,
@@ -450,12 +450,12 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
       const Spacer(),
       Text(me['name'].toString(), overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontSize: 13, color: Colors.white70)),
-      const SizedBox(height: 5),
+      const SizedBox(height: 2),
       Row(children: [
         const Icon(Icons.monetization_on, color: Color(0xFFF6C760), size: 23),
         const SizedBox(width: 5),
         Text(me['money'].toString() + ' Ft',
-          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const Spacer(),
         Text(ownHand.length.toString() + ' lap',
           style: const TextStyle(color: Color(0xFFFFDCA8), fontSize: 13)),
