@@ -432,7 +432,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
             fit: BoxFit.cover,
             errorBuilder: (context, error, stack) => const CircleAvatar(
               backgroundColor: Color(0xFFC08A4F),
-              child: Icon(Icons.local_bar, size: 34, color: Color(0xFF153B34))))),
+              child: Icon(Icons.local_bar, size: 34, color: Color(0xFF153B34)))))),
         const SizedBox(width: 9),
         Expanded(child: Text(me['hero'].toString(), maxLines: 2,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
