@@ -1,8 +1,30 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Distinct, temporary vector illustrations used until the authorised scans
-/// of the original Fröccs cards are supplied by the user.
+/// Original character card artwork extracted from the published rulebook.
+class HeroCardArt extends StatelessWidget {
+  const HeroCardArt({super.key, required this.hero});
+  final String hero;
+
+  static const slugs = {
+    'Mélyivó Fred': 'melyivo_fred', 'Löttyintős': 'lottyintos',
+    'Küv Évi': 'kuv_evi', 'Pohárnok': 'poharnok',
+    'Recycle Béla': 'recycle_bela', 'Sarki Jézus': 'sarki_jezus',
+    'Sommelier Pityu': 'sommelier_pityu', 'Vízköpő Karesz': 'vizkopo_karesz',
+    'Böske, a Rettentő': 'boske', 'Hollósi elvtárs': 'hollosi',
+    'Buzgómócsing': 'buzgomocsing', 'Icuka': 'icuka',
+  };
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/original/hero_${slugs[hero] ?? 'default'}.png',
+    fit: BoxFit.contain, semanticLabel: hero,
+    errorBuilder: (context, error, stack) => const Icon(
+      Icons.person, color: Color(0xFFFFE0A5)),
+  );
+}
+
+/// Backup illustrations for missing or unknown card assets.
 class PlaceholderCardArt extends CustomPainter {
   PlaceholderCardArt(this.card);
   final String card;

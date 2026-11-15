@@ -6,7 +6,7 @@ import 'card_art.dart';
 typedef ActionSender = void Function(Map<String, dynamic> action);
 
 /// Designed for a 1200x660 landscape canvas, scaled uniformly for phones.
-/// Replace assets/original/card_<id>.png with the authorised card scans.
+/// Original card artwork lives in assets/original; see sources.json.
 class LandscapeBoard extends StatefulWidget {
   const LandscapeBoard({
     super.key,
@@ -145,9 +145,8 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
           decoration: _frame(active: active),
           padding: const EdgeInsets.all(10),
           child: Row(children: [
-            CircleAvatar(radius: 26, backgroundColor: const Color(0xFFB17850),
-              child: Icon(p['bot'] == true ? Icons.smart_toy : Icons.person,
-                size: 30, color: const Color(0xFFFFE0A5))),
+            SizedBox(width: 48, height: 64,
+              child: HeroCardArt(hero: p['hero'].toString())),
             const SizedBox(width: 9),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,12 +450,7 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
       const SizedBox(height: 4),
       Row(children: [
         SizedBox(width: 48, height: 58,
-          child: ClipOval(child: Image.asset(
-            'assets/original/hero_' + _heroSlug(me['hero'].toString()) + '.png',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stack) => const CircleAvatar(
-              backgroundColor: Color(0xFFC08A4F),
-              child: Icon(Icons.local_bar, size: 34, color: Color(0xFF153B34)))))),
+          child: HeroCardArt(hero: me['hero'].toString())),
         const SizedBox(width: 9),
         Expanded(child: Text(me['hero'].toString(), maxLines: 2,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
@@ -738,22 +732,6 @@ class _LandscapeBoardState extends State<LandscapeBoard> {
         child: const Text('Értem'))],
     ));
 
-  String _heroSlug(String name) => switch (name) {
-    'Mélyivó Fred' => 'melyivo_fred',
-    'Löttyintős' => 'lottyintos',
-    'Küv Évi' => 'kuv_evi',
-    'Pohárnok' => 'poharnok',
-    'Recycle Béla' => 'recycle_bela',
-    'Sarki Jézus' => 'sarki_jezus',
-    'Sommelier Pityu' => 'sommelier_pityu',
-    'Vízköpő Karesz' => 'vizkopo_karesz',
-    'Böske, a Rettentő' => 'boske',
-    'Hollósi elvtárs' => 'hollosi',
-    'Buzgómócsing' => 'buzgomocsing',
-    'Icuka' => 'icuka',
-    _ => 'default',
-  };
-
   Future<void> _leaveConfirm() async {
     final ok = await showDialog<bool>(context: context,
       builder: (ctx) => AlertDialog(
@@ -833,7 +811,8 @@ class FroccsCard extends StatelessWidget {
         ]),
       clipBehavior: Clip.antiAlias,
       child: Image.asset('assets/original/card_' + card + '.png',
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
+        semanticLabel: cardNames[card] ?? card,
         errorBuilder: (context, error, stack) => Column(
           children: [
             const SizedBox(height: 5),
@@ -867,7 +846,26 @@ class GlassWidget extends StatelessWidget {
   final bool mini;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
+  Widget build(BuildContext context) => Stack(
+    alignment: Alignment.center,
+    children: [
+      Positioned.fill(child: Image.asset('assets/original/cup_$size.png',
+        fit: BoxFit.contain,
+        semanticLabel: '$size dl-es pohár, $amount dl ital',
+        errorBuilder: (context, error, stack) => _fallback())),
+      if (amount > 0)
+        Positioned(bottom: 0, right: 0, child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(color: const Color(0xEE153B34),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFFFE3B0))),
+          child: Text('$amount/$size dl', style: TextStyle(
+            fontSize: mini ? 10 : 13, fontWeight: FontWeight.w900,
+            color: const Color(0xFFFFE3B0))))),
+    ],
+  );
+
+  Widget _fallback() => CustomPaint(
     painter: GlassPainter(
       fullness: size == 0 ? 0 : amount / size),
     child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,

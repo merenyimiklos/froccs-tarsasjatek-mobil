@@ -8,7 +8,7 @@ online szobakóddal, vagy botokkal.
 
 - Kizárólag fekvő (landscape) Flutter Android felület, teljes képernyős faasztalos játéknézettel, arany/zöld retró vizuális stílussal, saját kézzel, ellenfélkártyákkal és kocsmapulttal.
 - Új, egységes kocsmai főmenü és lobby; kártyakiválasztás, célpontválasztás és vizuális poharak.
-- Eredeti lapképek automatikus betöltési helyei, amint a beszkennelt PNG-k rendelkezésre állnak; hiányukban ideiglenes rajzos kártyák.
+- Eredeti szabálykönyvből kinyert lapképek: 9 fröccslaptípus, 12 kocsmahős, 3 pohárlap és átlátszó logó; a főmenü és a játékasztal ezeket használja.
 - 106 lapos fröccspakli a hivatalos összesített típusmennyiségekkel.
 - Alap kétakciós kör, húzás, pohárvétel, kijátszás, eladás, körvége.
 - 2 játékosnál három lapból kettő megtartása.
@@ -36,7 +36,7 @@ Az alábbiak fejlesztést és fizikai kártyás ellenőrzést igényelnek:
 - Végjátéki feltételek és többjátékos hibakezelés további teszteket igényelnek.
 - Hálózati felhasználóazonosítás, visszacsatlakozás és a csalás elleni,
   valóban szerveroldali szabálymotor még szükséges.
-- Az eredeti grafikai exportok még nem kerültek a repóba.
+- A nagy felbontású kiadói exportok még nem állnak rendelkezésre; jelenleg a szabálykönyv eredeti ábráit használjuk.
 
 A hivatalos szabálykönyv:
 https://saldokiado.hu/custom/saldowebshop/image/data/betekinto/tarsasjatekszabaly/_froccs-tarsasjatek.pdf
@@ -105,11 +105,15 @@ de versenyszerű éles játékhoz a szabálymotort autoritatív szerverre kell v
 ## Eredeti grafika
 
 A felhasználó Hajnóczy Somával egyeztetett, és az eredeti grafikák használatához
-engedélyt jelzett. A tényleges magas felbontású grafikai fájlokat még nem kaptuk meg.
-A kód `assets/original/logo.png`, `assets/original/hero_<azonosító>.png`, valamint
-`assets/original/card_<azonosító>.png` formátumokat keres;
-hiányuk esetén szöveges/szimbólumos kártyákat jelenít meg.
-Az eredeti grafikai csomag beillesztése után a játék újra buildelhető.
+engedélyt jelzett. 2026-11-15-én az eredeti szabálykönyvből 25 grafika került
+az `assets/original/` mappába: minden jelenlegi fröccslap, kocsmahős, pohárlap
+és a logó. A kézben a teljes kártyafront látható, a főmenüben és az asztalon
+eredeti karakterlapok jelennek meg, a pohárlapokon külön töltöttségjelzővel.
+
+A forrás, oldalszámok és ellenőrzőösszeg az
+[`assets/original/sources.json`](assets/original/sources.json) fájlban szerepelnek.
+Az újragenerálás leírása: [`assets/original/README.md`](assets/original/README.md).
+A képek a PDF eredeti ábrái, nem a kiadó nagy felbontású nyomdai exportjai.
 
 A kiadó és az illusztrátor jogosultságait, illetve a nyilvános terjesztés
 kereteit a bemutatás/publikálás előtt írásban ajánlott rögzíteni.
@@ -124,8 +128,12 @@ kereteit a bemutatás/publikálás előtt írásban ajánlott rögzíteni.
 - `test/game_test.dart`: alap unit tesztek.
 - `.github/workflows/android-apk.yml`: debug APK CI.
 
-A repo még nem tartalmaz kész, kiadáshoz szükséges eredeti kártyaképeket.
+A repó a bemutatóhoz használható eredeti kártyaképeket tartalmazza.
 
 ## Bemutatás Soma felé
 
-A jelenlegi UI az eredeti játék látványára utaló, **önálló programkóddal rajzolt helyettesítő grafika**. A szkennelt kártyaképeket a `assets/original/` mappába kell elhelyezni. Ezt követően a megjelenítés automatikusan az eredeti kártyafrontokat használja. Az alkalmazás **még prototípus**, nem teljesen szabályhű: a hiteles itallap-árakat és a 19 szívatáskártya részletes altípuseloszlását külön ellenőrizni kell, illetve a kocsmahősök és az alku teljes szabályait is be kell fejezni. A bemutatóban ezt egyértelműen jelezni kell.
+A jelenlegi UI az eredeti szabálykönyv kártyaábráit használja. A kóddal rajzolt
+helyettesítők hiányzó asset esetén tartalékként megmaradtak.
+Az alkalmazás **még prototípus**, nem teljesen szabályhű: a hiteles itallap-árakat
+és a 19 szívatáskártya részletes altípuseloszlását külön ellenőrizni kell,
+illetve a kocsmahősök és az alku teljes szabályait is be kell fejezni.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'card_art.dart';
 import 'landscape_board.dart';
 import 'room.dart';
 
@@ -193,7 +194,7 @@ class _FroccsScreenState extends State<FroccsScreen> {
             style: TextStyle(fontSize: 12, color: Colors.white70))),
         ]),
         const Spacer(),
-        const Text('TESZTVERZIÓ  •  EREDETI GRAFIKÁK HAMAROSAN',
+        const Text('TESZTVERZIÓ  •  EREDETI FRÖCCS KÁRTYÁKKAL',
           style: TextStyle(color: Color(0xFFFFC67F), fontSize: 11,
             letterSpacing: 1)),
       ]),
@@ -246,8 +247,9 @@ class _FroccsScreenState extends State<FroccsScreen> {
               width: selected ? 2 : 1),
             borderRadius: BorderRadius.circular(11)),
           child: Row(children: [
-            Icon(selected ? Icons.verified : Icons.person_outline,
-              color: const Color(0xFFFFE1A0), size: 19),
+            SizedBox(width: 24, height: 34, child: HeroCardArt(hero: hero)),
+            if (selected) const Icon(Icons.verified,
+              color: Color(0xFFFFE1A0), size: 14),
             const SizedBox(width: 5),
             Expanded(child: Text(hero, maxLines: 2,
               overflow: TextOverflow.ellipsis,

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:math' show Random;
 
-/// A rules-oriented prototype. No copyrighted artwork or card copy is bundled.
+/// Card identifiers for the rules-oriented prototype.
 const cardNames = <String, String>{
   'muscat': 'Sárgamuskotály', 'barat': 'Szürkebarát',
   'veltelini': 'Zöld Veltelini', 'soda': 'Szóda',
